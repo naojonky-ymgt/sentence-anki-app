@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Voice Anki (Kind Mode)</title>
+    <title>Voice Anki (En -> Jp File)</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; color: #333; }
         .card { background: white; width: 100%; max-width: 500px; padding: 40px 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
@@ -12,6 +12,10 @@
         .english { font-size: 20px; color: #007bff; margin-bottom: 30px; min-height: 30px; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
         .english.visible { opacity: 1; }
         
+        .unit-selector { margin-bottom: 20px; width: 100%; }
+        select { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 2px solid #ddd; background: #fff; cursor: pointer; font-weight: bold; }
+        select:focus { border-color: #007bff; outline: none; }
+
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
         button { border: none; padding: 15px; border-radius: 12px; font-size: 16px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         
@@ -27,13 +31,9 @@
 
         .result-msg { margin-top: 15px; font-weight: bold; min-height: 24px; word-break: break-all; }
         .correct { color: #2ed573; }
-        .close-call { color: #ffa502; } /* おまけ合格用 */
+        .close-call { color: #ffa502; }
         .incorrect { color: #ff4757; }
         .listening-text { font-size: 12px; color: #aaa; margin-top: 5px; min-height: 18px; }
-
-        details { width: 100%; max-width: 500px; margin-top: 30px; text-align: left; }
-        textarea { width: 100%; height: 150px; margin-top: 10px; padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-family: monospace; white-space: pre; overflow-x: scroll; }
-        .btn-save { background: #333; color: white; width: 100%; margin-top: 5px; }
 
         @keyframes rippleEffect { 0% { width: 0; height: 0; opacity: 1; } 100% { width: 400px; height: 400px; opacity: 0; } }
     </style>
@@ -41,9 +41,15 @@
 <body>
 
 <div class="card">
-    <div class="status" id="counter">1 / 5</div>
-    <div class="japanese" id="jp-text">読み込み中...</div>
-    <div class="english" id="en-text">Loading...</div>
+    <div class="unit-selector">
+        <select id="unit-select" onchange="loadUnitFile(this.value)">
+            <option value="" disabled selected>📂 勉強するUnitを選んでください</option>
+        </select>
+    </div>
+
+    <div class="status" id="counter">0 / 0</div>
+    <div class="japanese" id="jp-text">Unitを選択してください</div>
+    <div class="english" id="en-text">Please select a unit</div>
     
     <div class="result-msg" id="result-msg"></div>
     <div class="listening-text" id="listening-text">...</div>
@@ -59,47 +65,17 @@
     </div>
 </div>
 
-<details>
-    <summary>📝 例文データの編集 (ExcelからコピペOK)</summary>
-    <textarea id="data-input"></textarea>
-    <button class="btn-save" onclick="saveData()">データを保存して更新</button>
-</details>
-
 <script>
     // ==========================================
-    // ▼ここに例文を「日本語(タブ)英語」で書いてください
+    // ▼ ここに使用するファイル名を登録してください
     // ==========================================
-    const defaultData = `
-前田さんがかわいいTシャツを着ているのを見た。	I saw Mr. Maeda wearing a cute T-shirt.
-安いTシャツは傷みやすいものもある。	Some cheap T-shirts get damaged easily.
-オーガニックコットンのTシャツを販売している。	They sell T-shirts made of organic cotton.
-私はサングラスをかけたイヌのTシャツがいいな。	I like the T-shirt with a dog wearing sunglasses.
-クマが魚を口にくわえて座っている。	A bear sits holding a fish in its mouth.
-ああ，なんてかわいいTシャツ！	Oh, what a cute T-shirt!
-気に入っていただけてうれしいです。	I’m pleased to hear that you like it.
-そのかわいいネコは腕を組んで私たちを見ています。	The cute cat is looking at us with its arms folded.
-これはオーガニックコットンで作られたTシャツです。	This is a T-shirt made of organic cotton.
-私はオーガニックコットンの服を作っている衣類製造業者を支援しているんだ。	I support clothing manufacturers making organic cotton clothes.
-一般的に言って，それらには有害な化学物質は含まれていない。	Generally speaking, they don’t contain any harmful chemicals.
-ポップコーンを食べている男性は友人のビルです。	The man eating popcorn is my friend Bill.
-これは父が描いた絵です。	This is the picture painted by my father.
-赤ちゃんは泣き続けた。	The baby kept crying.
-私のラケットが試合中に壊れた。	My racket got broken during the match.
-あなたを待たせてごめんね。	Sorry to keep you waiting.
-ドアに鍵をかけておきなさい。	Keep the door locked.
-私はメアリーが通りを渡っているのを見た。	I saw Mary crossing the street.
-昨日髪をカットしてもらったよ。	I had my hair cut yesterday.
-私は宿題をするのに忙しかった。	I was busy doing my homework.
-私の娘はがっかりして家に帰ってきた。	My daughter came home disappointed.
-彼女はうれしそうにほほ笑みながら，賞品を受け取った。	She accepted the prize, smiling happily.
-テストの結果がうれしくて，彼女はとび上がって喜んだ。	Pleased by her test result, she jumped for joy!
-以前ニューヨークを訪れたことがあったので，彼女はおいしいレストランを知っていました。	Having visited New York before, she knew the good restaurants.
-私は心を高鳴らせながらその曲を聞いた。	I listened to the music with my heart beating.
-空模様から判断すると，今夜は雪が降るね。	Judging from the sky, it’s going to snow tonight.
-`;
+    const unitList = [
+        { name: "Unit 7: 分詞", file: "fb1_unit07.txt" },
+        { name: "Unit 8: 比較", file: "fb1_unit08.txt" },
+        { name: "Unit 9: 関係詞", file: "fb1_unit09.txt" }
+    ];
     // ==========================================
 
-    // ★優しさ設定: 0.7 = 70%合っていれば正解とする
     const PASS_THRESHOLD = 0.70; 
 
     let sentences = [];
@@ -115,22 +91,50 @@
     const btnMic = document.getElementById('btn-mic');
     const micLabel = document.getElementById('mic-label');
     const counter = document.getElementById('counter');
-    const dataInput = document.getElementById('data-input');
+    const unitSelect = document.getElementById('unit-select');
 
     function init() {
-        const savedData = localStorage.getItem('mySentences_tab_v2');
-        if (savedData) {
-            parseData(savedData);
-            dataInput.value = savedData;
-        } else {
-            const cleanData = defaultData.trim();
-            parseData(cleanData);
-            dataInput.value = cleanData;
-        }
+        unitList.forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit.file;
+            option.text = unit.name;
+            unitSelect.appendChild(option);
+        });
+
         setupRecognition();
-        showCard();
+        
+        const lastUnit = localStorage.getItem('last_unit_file_v3');
+        if(lastUnit && unitList.some(u => u.file === lastUnit)) {
+            unitSelect.value = lastUnit;
+            loadUnitFile(lastUnit);
+        }
     }
 
+    async function loadUnitFile(filename) {
+        try {
+            const response = await fetch(filename);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const text = await response.text();
+            
+            if(parseData(text)) {
+                currentIndex = 0;
+                showCard();
+                localStorage.setItem('last_unit_file_v3', filename);
+                resultMsg.innerText = "ファイルを読み込みました (英語→日本語形式)";
+                resultMsg.className = "result-msg";
+            } else {
+                alert("データ形式エラー: 英語[タブ]日本語 の形式か確認してください");
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("⚠️ 読み込みエラー\nサーバー経由(GitHub Pages等)で開いていますか？\nファイル名の大文字小文字は合っていますか？");
+            jpText.innerText = "Error";
+            enText.innerText = "Error";
+        }
+    }
+
+    // ▼▼▼ ここを修正しました（英語→日本語の順で読み取る） ▼▼▼
     function parseData(text) {
         const lines = text.split('\n');
         const newSentences = [];
@@ -138,9 +142,11 @@
             if(!line.trim()) return;
             let parts = line.split('\t');
             if (parts.length < 2) parts = line.split('|');
+            
             if(parts.length >= 2) {
-                const jp = parts[0].trim();
-                const en = parts[1].trim();
+                // 配列の0番目を「英語(正解)」、1番目を「日本語(問題)」として扱います
+                const en = parts[0].trim(); 
+                const jp = parts[1].trim(); 
                 if(jp && en) newSentences.push({ jp, en });
             }
         });
@@ -150,6 +156,7 @@
         }
         return false;
     }
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     function setupRecognition() {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
@@ -168,22 +175,18 @@
         };
 
         recognition.onerror = (event) => {
-            console.error(event.error);
             if(event.error === 'not-allowed') {
-                alert("マイク許可が必要です。ブラウザの設定を確認してください。");
+                alert("マイク許可が必要です。");
                 stopSession();
             }
         };
-
         recognition.onend = () => {
-            if (isSessionActive) {
-                setTimeout(() => { try { recognition.start(); } catch(e){} }, 500);
-            }
+            if (isSessionActive) setTimeout(() => { try { recognition.start(); } catch(e){} }, 500);
         };
     }
 
     function toggleSession() {
-        if (!recognition) { alert("このブラウザは対応していません"); return; }
+        if (!recognition) { alert("ブラウザ非対応"); return; }
         if (isSessionActive) stopSession();
         else startSession();
     }
@@ -193,9 +196,9 @@
             recognition.start();
             isSessionActive = true;
             btnMic.classList.add('active');
-            micLabel.innerText = "マイクON中 (会話して回答)";
+            micLabel.innerText = "マイクON中";
             resultMsg.innerText = "🎤 お話しください...";
-        } catch(e) { console.error(e); }
+        } catch(e) {}
     }
 
     function stopSession() {
@@ -203,7 +206,6 @@
         recognition.stop();
         btnMic.classList.remove('active');
         micLabel.innerText = "マイクONにする (開始)";
-        listeningText.innerText = "...";
     }
 
     function showCard() {
@@ -239,41 +241,32 @@
         speechSynthesis.speak(u);
     }
 
-    // ▼▼▼ ここが新しくなった判定ロジック ▼▼▼
     function checkAnswer(spokenText) {
         const correctText = sentences[currentIndex].en;
         const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-        
         const spokenClean = normalize(spokenText);
         const correctClean = normalize(correctText);
-
-        // 類似度(0.0〜1.0)を計算
         const similarity = getSimilarity(spokenClean, correctClean);
         const similarityPercent = Math.round(similarity * 100);
 
         if (similarity >= PASS_THRESHOLD) {
-            // 合格ラインを超えたら
             if (similarity === 1.0) {
                 resultMsg.innerText = `⭕ Perfect! (${similarityPercent}%)`;
                 resultMsg.className = "result-msg correct";
             } else {
-                // 完璧じゃないけど合格（おまけ合格）
                 resultMsg.innerText = `🆗 Good! (${similarityPercent}%) - You said: "${spokenText}"`;
                 resultMsg.className = "result-msg close-call";
             }
             enText.classList.add('visible');
             playAudio(false); 
         } else {
-            // 不合格
             resultMsg.innerText = `❌ Match: ${similarityPercent}% ... You said: "${spokenText}"`;
             resultMsg.className = "result-msg incorrect";
         }
     }
 
-    // レーベンシュタイン距離による類似度計算関数
     function getSimilarity(s1, s2) {
-        let longer = s1;
-        let shorter = s2;
+        let longer = s1; let shorter = s2;
         if (s1.length < s2.length) { longer = s2; shorter = s1; }
         const longerLength = longer.length;
         if (longerLength === 0) return 1.0;
@@ -281,8 +274,7 @@
     }
 
     function editDistance(s1, s2) {
-        s1 = s1.toLowerCase();
-        s2 = s2.toLowerCase();
+        s1 = s1.toLowerCase(); s2 = s2.toLowerCase();
         const costs = new Array();
         for (let i = 0; i <= s1.length; i++) {
             let lastValue = i;
@@ -300,19 +292,6 @@
             if (i > 0) costs[s2.length] = lastValue;
         }
         return costs[s2.length];
-    }
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
-    function saveData() {
-        const rawText = dataInput.value;
-        if(parseData(rawText)) {
-            localStorage.setItem('mySentences_tab_v2', rawText);
-            currentIndex = 0;
-            showCard();
-            alert("更新しました！");
-        } else {
-            alert("データ形式を確認してください");
-        }
     }
 
     init();
