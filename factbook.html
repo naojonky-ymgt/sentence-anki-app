@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文暗誦フラッシュカード (FACTBOOK LE 1)</title>
+    <style>
+        /* デザイン設定 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 750px;
+            width: 100%;
+            padding: 40px;
+            min-height: 550px;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; font-size: 28px; }
+        
+        .setup-section { background: #f5f5f5; padding: 30px; border-radius: 8px; margin-bottom: 30px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        select { padding: 12px; width: 100%; max-width: 300px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; margin-bottom: 15px; }
+        .order-options { margin-bottom: 20px; font-size: 14px; }
+        .order-options label { margin: 0 10px; cursor: pointer; }
+
+        button { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #667eea; color: white; width: 100%; max-width: 250px; font-size: 16px; margin: 0 auto; }
+        
+        .practice-section { display: none; flex: 1; flex-direction: column; }
+        .practice-section.active { display: flex; }
+        .progress-bar { background: #e0e0e0; height: 6px; border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
+        .progress-fill { background: #667eea; height: 100%; width: 0%; transition: width 0.3s; }
+        
+        /* モードセレクタ */
+        .mode-selector { display: flex; gap: 4px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
+        .mode-btn { padding: 6px 10px; border: 1px solid #ddd; background: white; font-size: 10px; cursor: pointer; }
+        .mode-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        /* 再生ボタン専用スタイル */
+        .btn-audio-top {
+            padding: 6px 10px; 
+            border: 1px solid #4a5568; 
+            background: #4a5568; 
+            color: white; 
+            font-size: 10px; 
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 3px;
+        }
+        .btn-audio-top:hover { background: #2d3748; }
+
+        .card-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fdfdfd; border: 2px solid #eee; border-radius: 12px; padding: 30px; margin-bottom: 20px; position: relative; min-height: 250px; }
+        .unit-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; background: #eee; padding: 2px 8px; border-radius: 4px; }
+        .question-text { font-size: 22px; color: #333; text-align: center; margin-bottom: 20px; }
+        .question-subtext { font-size: 18px; color: #666; text-align: center; padding-top: 15px; border-top: 1px solid #eee; width: 100%; }
+        
+        .input-ui, .voice-ui { width: 100%; display: none; margin-top: 15px; }
+        .input-ui.active, .voice-ui.active { display: block; }
+        #answerInput { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
+        
+        .voice-ui { text-align: center; }
+        .mic-btn { background: #f8d7da; color: #721c24; border-radius: 50%; width: 50px; height: 50px; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; }
+        .mic-btn.listening { background: #dc3545; color: white; animation: pulse 1.5s infinite; }
+        
+        .diff-display { margin-top: 15px; font-size: 18px; line-height: 1.6; text-align: center; display: none; background: #fff; padding: 10px; border-radius: 8px; width: 100%; }
+        .word-correct { color: #28a745; font-weight: bold; margin: 0 3px; }
+        .word-wrong { color: #dc3545; text-decoration: line-through; margin: 0 3px; font-size: 0.85em; opacity: 0.6; }
+        .word-missing { color: #dc3545; font-weight: bold; border-bottom: 2px solid #dc3545; margin: 0 3px; }
+        .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #333; color: #fff; font-size: 14px; margin-bottom: 10px; }
+
+        .answer-display { width: 100%; text-align: center; margin-top: 15px; display: none; background: #f0f4ff; padding: 15px; border-radius: 8px; }
+        
+        .evaluation-buttons { display: none; gap: 10px; width: 100%; margin-top: 15px; flex-wrap: wrap; }
+        .btn-status { flex: 1; padding: 15px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; font-weight: bold; min-width: 100px; }
+        .btn-remembered { background: #d4edda; color: #155724; }
+        .btn-so-so { background: #fff3cd; color: #856404; }
+        .btn-forgotten { background: #f8d7da; color: #721c24; }
+        
+        .btn-back { width: 100%; background: #e2e8f0; color: #4a5568; margin-top: 10px; padding: 10px; font-size: 13px; border-radius: 8px; border:none; cursor:pointer; }
+        .stats { font-size: 12px; color: #666; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🃏 英文暗誦 PRO 〜 FACTBOOK LE 1</h1>
+        
+        <div class="setup-section" id="setupSection">
+            <select id="unitSelect"></select>
+            <div class="order-options">
+                <label><input type="radio" name="playOrder" value="sequence" checked> 番号順</label>
+                <label><input type="radio" name="playOrder" value="random"> ランダム</label>
+            </div>
+            <button class="btn-primary" onclick="startPractice()">学習開始</button>
+        </div>
+        
+        <div class="practice-section" id="practiceSection">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            
+            <div class="mode-selector">
+                <button class="btn-audio-top" onclick="playAudio()">🔊 音声再生 (0)</button>
+                
+                <button class="mode-btn active" onclick="setMode(1)">1: 穴30%</button>
+                <button class="mode-btn" onclick="setMode(2)">2: 穴50%</button>
+                <button class="mode-btn" onclick="setMode(3)">3: 頭文字</button>
+                <button class="mode-btn" onclick="setMode(4)">4: 和訳</button>
+                <button class="mode-btn" onclick="setMode(5)">5: タイピング</button>
+                <button class="mode-btn" onclick="setMode(6)">6: 音声</button>
+            </div>
+            
+            <div class="card-area">
+                <div class="unit-badge" id="questionUnit"></div>
+                <div class="question-text" id="questionText"></div>
+                <div class="question-subtext" id="questionSubtext"></div>
+                
+                <div class="input-ui" id="inputUI">
+                    <input type="text" id="answerInput" placeholder="英文を入力..." autocomplete="off">
+                </div>
+                <div class="voice-ui" id="voiceUI">
+                    <button id="micBtn" class="mic-btn" onclick="toggleListening()">🎤</button>
+                    <div id="voiceStatus" style="font-size:11px; color:#888; margin-top:5px;">クリックして話す</div>
+                </div>
+
+                <div id="diffResult" class="diff-display"></div>
+
+                <div class="answer-display" id="answerDisplay">
+                    <div id="correctText" style="font-weight:bold; font-size:20px;"></div>
+                </div>
+            </div>
+
+            <div style="text-align:center; min-height: 120px;">
+                <button class="btn-primary" id="showAnswerBtn" onclick="showAnswer()">答えを確認 (Enter)</button>
+                
+                <div class="evaluation-buttons" id="evalButtons">
+                    <button class="btn-status btn-remembered" onclick="record(1)">😄 覚えた (J)</button>
+                    <button class="btn-status btn-so-so" onclick="record(2)">😐 まあまあ (K)</button>
+                    <button class="btn-status btn-forgotten" onclick="record(3)">😰 忘れた (L)</button>
+                    <button class="btn-back" id="backBtn" onclick="goBack()">⬅ 前のカードに戻る</button>
+                </div>
+            </div>
+            
+            <div class="stats" id="statsText"></div>
+            <button onclick="location.reload()" style="background:none; border:none; color:#999; cursor:pointer; font-size:11px; margin-top:10px; width:100%;">Unit選択へ戻る</button>
+        </div>
+    </div>
+
+    <script>
+        let allItems = [];
+        let currentList = [];
+        let retryList = [];
+        let idx = 0;
+        let mode = 1;
+        let stats = { 1:0, 2:0, 3:0 };
+        let history = [];
+
+        // 音声認識
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = SpeechRecognition ? new SpeechRecognition() : null;
+        if(recognition) {
+            recognition.lang = 'en-US';
+            recognition.onstart = () => { document.getElementById('micBtn').classList.add('listening'); };
+            recognition.onresult = (e) => { compareHighPrecision(e.results[0][0].transcript); showAnswer(); };
+            recognition.onend = () => { document.getElementById('micBtn').classList.remove('listening'); };
+        }
+
+        // テキスト読み上げ (Text-to-Speech)
+        function playAudio() {
+            if (!window.speechSynthesis) {
+                alert("お使いのブラウザは音声読み上げに対応していません。");
+                return;
+            }
+            const item = currentList[idx];
+            // 読み上げ設定
+            const uttr = new SpeechSynthesisUtterance(item.eng);
+            uttr.lang = 'en-US'; 
+            uttr.rate = 1.0; // 速度
+            
+            // 既存の読み上げをキャンセルして再生
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(uttr);
+        }
+
+        function initData() {
+            const raw = document.getElementById('studyData').textContent.trim();
+            raw.split('\n').forEach(line => {
+                const cols = line.split('\t');
+                if(cols.length >= 3) allItems.push({ unit: cols[0], eng: cols[1].trim(), jpn: cols[2].trim() });
+            });
+            const unitSet = [...new Set(allItems.map(i => i.unit))];
+            unitSet.forEach(u => {
+                const op = document.createElement('option');
+                op.value = u; op.textContent = u; document.getElementById('unitSelect').appendChild(op);
+            });
+        }
+
+        function startPractice() {
+            const sel = document.getElementById('unitSelect').value;
+            currentList = allItems.filter(i => i.unit === sel);
+            if(document.querySelector('input[name="playOrder"]:checked').value === 'random') {
+                currentList.sort(() => Math.random() - 0.5);
+            }
+            idx = 0; stats = {1:0, 2:0, 3:0}; history = []; retryList = [];
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('practiceSection').classList.add('active');
+            show();
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', i+1 === m));
+            show();
+        }
+
+        function show() {
+            window.speechSynthesis.cancel(); // ページめくり時に音声を停止
+            const item = currentList[idx];
+            document.getElementById('questionUnit').textContent = item.unit;
+            document.getElementById('questionSubtext').textContent = item.jpn;
+            document.getElementById('correctText').textContent = item.eng;
+            document.getElementById('answerDisplay').style.display = 'none';
+            document.getElementById('showAnswerBtn').style.display = 'block';
+            document.getElementById('evalButtons').style.display = 'none';
+            document.getElementById('diffResult').style.display = 'none';
+            document.getElementById('answerInput').value = '';
+            document.getElementById('inputUI').classList.toggle('active', mode === 5);
+            document.getElementById('voiceUI').classList.toggle('active', mode === 6);
+            document.getElementById('backBtn').style.visibility = (idx === 0) ? 'hidden' : 'visible';
+
+            let display = "";
+            if (mode === 5) display = "タイピングしてください";
+            else if (mode === 6) display = "話してください";
+            else if (mode === 4) display = "???";
+            else {
+                const words = item.eng.split(/(\s+)/);
+                const rate = (mode === 1) ? 0.3 : (mode === 2) ? 0.5 : 0;
+                display = words.map(w => {
+                    if(!/\w/.test(w)) return w;
+                    if(mode === 3) return w[0] + ".".repeat(w.length-1);
+                    return Math.random() < rate ? "____" : w;
+                }).join("");
+            }
+            document.getElementById('questionText').textContent = display;
+            if(mode === 5) setTimeout(() => document.getElementById('answerInput').focus(), 50);
+            updateUI();
+        }
+
+        function showAnswer() {
+            if (mode === 5) compareHighPrecision(document.getElementById('answerInput').value);
+            document.getElementById('answerDisplay').style.display = 'block';
+            document.getElementById('showAnswerBtn').style.display = 'none';
+            document.getElementById('evalButtons').style.display = 'flex';
+        }
+
+        /**
+         * 高精度判定ロジック
+         * 引用符(" ' “ ” ‘ ’)を無視する設定に修正
+         */
+        function compareHighPrecision(userInput) {
+            const correctVal = currentList[idx].eng;
+            
+            // クリーニング関数: 記号を消して小文字にする
+            // ダブルクォーテーション、スマートクォート、アポストロフィー(’ ' ‘)を削除対象に追加
+            const clean = (t) => t.toLowerCase().replace(/[.,!?"'“”‘’]/g, "").trim();
+            
+            const userWords = userInput.split(/\s+/).filter(w => w !== "").map(clean);
+            const correctWords = correctVal.split(/\s+/).filter(w => w !== "").map(clean);
+            const originalCorrectWords = correctVal.split(/\s+/).filter(w => w !== "");
+
+            // DPテーブルの作成
+            const n = userWords.length;
+            const m = correctWords.length;
+            const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+
+            for (let i = 0; i <= n; i++) dp[i][0] = i;
+            for (let j = 0; j <= m; j++) dp[0][j] = j;
+
+            for (let i = 1; i <= n; i++) {
+                for (let j = 1; j <= m; j++) {
+                    if (userWords[i - 1] === correctWords[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1];
+                    } else {
+                        dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
+                    }
+                }
+            }
+
+            // バックトレース
+            let i = n, j = m;
+            const resultHtmlParts = [];
+            let correctCount = 0;
+
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && userWords[i - 1] === correctWords[j - 1]) {
+                    resultHtmlParts.unshift(`<span class="word-correct">${originalCorrectWords[j - 1]}</span>`);
+                    correctCount++;
+                    i--; j--;
+                } else if (j > 0 && (i === 0 || dp[i][j - 1] <= dp[i - 1][j] && dp[i][j - 1] <= dp[i - 1][j - 1])) {
+                    resultHtmlParts.unshift(`<span class="word-missing">${originalCorrectWords[j - 1]}</span>`);
+                    j--;
+                } else {
+                    resultHtmlParts.unshift(`<span class="word-wrong">${userWords[i - 1]}</span>`);
+                    i--;
+                }
+            }
+
+            const score = correctWords.length > 0 ? Math.round((correctCount / correctWords.length) * 100) : 0;
+            const diffArea = document.getElementById('diffResult');
+            diffArea.innerHTML = `<div class="score-badge">一致率: ${score}%</div><br>${resultHtmlParts.join(" ")}`;
+            diffArea.style.display = 'block';
+        }
+
+        function record(s) {
+            window.speechSynthesis.cancel(); // 次へ行く時に停止
+            if (s !== 1) retryList.push(currentList[idx]);
+            history.push({status: s, item: currentList[idx], wasInRetry: (s !== 1)});
+            stats[s]++;
+            idx++;
+
+            if (idx < currentList.length) show();
+            else {
+                if (retryList.length > 0) {
+                    alert(`覚えていない ${retryList.length} 件を復習します。`);
+                    currentList = [...retryList];
+                    retryList = []; idx = 0; stats = { 1:0, 2:0, 3:0 }; history = [];
+                    show();
+                } else {
+                    alert("全カード完了！");
+                    location.reload();
+                }
+            }
+        }
+
+        function goBack() {
+            window.speechSynthesis.cancel();
+            if (idx > 0) {
+                idx--;
+                const lastAction = history.pop();
+                stats[lastAction.status]--;
+                if (lastAction.wasInRetry) retryList.pop();
+                show();
+            }
+        }
+
+        function toggleListening() { if(recognition) try{ recognition.start(); }catch(e){ recognition.stop(); } }
+
+        function updateUI() {
+            document.getElementById('progressFill').style.width = (idx / currentList.length * 100) + "%";
+            document.getElementById('statsText').textContent = `覚: ${stats[1]} / 普: ${stats[2]} / 忘: ${stats[3]}`;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') {
+                if(e.key === 'Enter') showAnswer();
+                return;
+            }
+            
+            // ショートカット 0 を追加
+            if(e.key === '0') playAudio();
+
+            const isAnsVisible = document.getElementById('evalButtons').style.display === 'flex';
+            if (e.key === 'Enter' && !isAnsVisible) showAnswer();
+            if (e.key >= '1' && e.key <= '6') setMode(parseInt(e.key));
+            if (isAnsVisible) {
+                if (e.key.toLowerCase() === 'j') record(1);
+                if (e.key.toLowerCase() === 'k') record(2);
+                if (e.key.toLowerCase() === 'l') record(3);
+                if (e.key === 'Backspace' || e.key === 'ArrowLeft') goBack();
+                // 一応Pも残しておきますが、0で動作します
+                if (e.key.toLowerCase() === 'p') playAudio();
+            }
+        });
+
+        window.onload = initData;
+    </script>
+
+    <script id="studyData" type="text/plain">
+Unit 0 UE	Which school event did you enjoy the most?	どの学校行事が一番楽しかったですか。
+Unit 0 UE	It isn’t easy to choose.	選ぶのは簡単ではありません。　
+Unit 0 UE	Where did you go?	どこに行きましたか。
+Unit 0 UE	How was the food?	食事はどうでしたか。
+Unit 0 UE	What did you do at night?	夜は何をしましたか。
+Unit 0 UE	Did you have a campfire?	キャンプファイヤーをしましたか。
+Unit 0 UE	I usually cook when I have time.	私は時間があるときにはたいてい料理をします。
+Unit 0 UE	My mother is a good cook.	私の母は料理が上手です。　
+Unit 0 UE	My mother often teaches me how to cook.	母はよく料理の仕方を教えてくれます。
+Unit 0 UE	What kind of dishes do you like to cook?	どのような種類の料理を作るのが好きですか。
+Unit 0 UE	I often make spaghetti and pizza.	私はよくスパゲッティやピザを作ります。
+Unit 0 UE	That sounds great. 　	それはすごいですね。
+Unit 0 UE	Comedy movies make me happy.	コメディー映画を見ると楽しくなります。
+Unit 0 FACT	We are happy.	私たちは幸せです。
+Unit 0 FACT	I like dogs.	私は犬が好きです。
+Unit 0 FACT	He isn’t [is not] happy.	彼は幸せではない。
+Unit 0 FACT	I don’t [do not] like dogs.	私は犬が好きではない。
+Unit 0 FACT	Are you happy?	あなたは幸せですか。
+Unit 0 FACT	Do you like dogs?	あなたは犬が好きですか。
+Unit 0 FACT	My father swims really well.	私の父は泳ぐのが本当に上手だ。
+Unit 0 FACT	My cousin is an engineer.	私のいとこはエンジニアです。
+Unit 0 FACT	You look happy.	楽しそうですね。
+Unit 0 FACT	He read an interesting book.	彼は興味深い本を読んだ。
+Unit 0 FACT	Can you give me your phone number?	あなたの電話番号を（教えて）くれませんか。
+Unit 0 FACT	My parents bought me a nice sweater.	両親は私にすてきなセーターを買ってくれた。
+Unit 0 FACT	We call him Jimmy.	私たちは彼をジミーと呼ぶ。
+Unit 0 FACT	I’ll make you happy.	君を幸せにしてあげるよ。
+Unit 1 UE	I’m going to play badminton on Sunday.	日曜にバドミントンをするつもりです。
+Unit 1 UE	I have a piano lesson every Saturday morning.	毎週土曜の午前中にピアノのレッスンを受けています。
+Unit 1 UE	I was planning to go shopping in the afternoon.	その日の午後にショッピングに行く予定でした。
+Unit 1 UE	The workshop starts at 2 p.m.	そのワークショップは午後2時に始まります。
+Unit 1 UE	I will reschedule.　	私がスケジュールを変更しましょう。
+Unit 1 UE	I saw the delivery drone booth.	私は宅配ドローンのブースを見ました。
+Unit 1 UE	People in remote areas will get items quickly.	遠隔地の人々はすぐに品物を手に入れるでしょう。
+Unit 1 UE	I think (that) the car is useful for our city.	その車は私たちの町に役立つと思います。
+Unit 1 UE	Self-driving cars will make this city’s air cleaner.	自動運転車はこの町の空気をよりきれいにするでしょう。
+Unit 1 FACT	I know three languages.	私は３つの言語を知っています。
+Unit 1 FACT	The earth goes around the sun.   	地球は太陽の周りを回っている。
+Unit 1 FACT	My dad takes the first train every day.	私の父は毎日，始発電車に乗ります。
+Unit 1 FACT	It started raining.	雨が降り始めた。
+Unit 1 FACT	My father played golf when he was younger.	私の父は今より若い頃，ゴルフをしていた。
+Unit 1 FACT	I am planning a trip to London.	私はロンドンへの旅行を計画しているところです。
+Unit 1 FACT	They were chatting with Lucy at that time.	そのとき，彼らはルーシーとおしゃべりしていました。
+Unit 1 FACT	Take an umbrella because it will rain later.	傘をもっていきなさい。あとで雨になるから。
+Unit 1 FACT	OK, I’ll phone her right away.	わかった。すぐに彼女に電話を入れるよ。
+Unit 1 FACT	It’s going to rain soon.	もうすぐ雨になるよ。
+Unit 1 FACT	Are you going to have a party?	あなたはパーティーをするつもりですか。
+Unit 1 FACT	I’m seeing a movie with Keiko on Thursday.	私は木曜日にケイコと映画を見る予定です。
+Unit 1 FACT	The concert starts at four.	そのコンサートは4時に始まります。
+Unit 2 UE	Did you know that a new bookstore has opened near the station?	駅の近くに新しい書店がオープンしたの知ってた？
+Unit 2 UE	Have you been to the store?	その店に行ったことある？
+Unit 2 UE	It’s awesome!	すごくいいよ！
+Unit 2 UE	Why don’t we go together?	一緒に行かない？
+Unit 2 UE	I’ve been buying books online since last year.	去年からずっと本をネットで買っているんだ。
+Unit 2 UE	I’ve never seen such a unique bookstore.	そのようなユニークな書店は見たことがないよ。
+Unit 2 UE	Before I left the town, the house had been empty for years.	私がこの町を出る前，その家は何年も空き家のままだったよ。
+Unit 2 UE	The café has been popular since it opened.	カフェは開店して以来ずっと人気があります。
+Unit 2 UE	I’ve been to a similar restaurant.	似たようなレストランに行ったことがあるよ。
+Unit 2 UE	They will have finished the discussion by next year.	彼らはその議論を来年までには終わらせているでしょう。
+Unit 2 FACT	Look! It’s stopped raining.	見て！　雨がやんだわ。
+Unit 2 FACT	We’ve been to Universal Studios in Los Angeles.	私たちはロサンゼルスのユニバーサルスタジオに行ったことがあります。
+Unit 2 FACT	We’ve been teammates for three years.	私たちは３年間ずっとチームメートです。
+Unit 2 FACT	Don’t worry. I’ve cleaned your room.	だいじょうぶ。　あなたの部屋を掃除しておいたわよ。
+Unit 2 FACT	The game had already started when I got to the stadium.	その試合は私がスタジアムに着いたときには，すでに始まっていました。
+Unit 2 FACT	I had never used a smartphone before I bought one this year.	今年買う前は，私はスマートフォンを使ったことがありませんでした。
+Unit 2 FACT	They had known each other for seven years before they got married.	彼らは結婚する前に７年間，知り合いだったんですよ。
+Unit 2 FACT	I knew the ending of the movie because I had read the book.	私は本を読んでいたから，映画のエンディングを知っていました。
+Unit 2 FACT	I will have finished my homework by ten.	私は１０時までには宿題を終わらせていますよ。
+Unit 2 FACT	I’ve been cleaning my room since this morning.	私は今朝からずっと自分の部屋を掃除し続けているんです。
+Unit 3 UE	What can we do with it?	それを使って何ができるの？
+Unit 3 UE	Most kinds of liquids can be used.	ほとんどの種類の液体が使えるよ。
+Unit 3 UE	It must be useful in an emergency.	それは非常時に役立つにちがいない。
+Unit 3 UE	I should keep a water battery at home.	水電池を家に置いておくべきだ。
+Unit 3 UE	I will have to buy some.	私はいくつか買わなければならないだろう。
+Unit 3 UE	It may be difficult to get food in affected areas.	被災地で食料を手に入れるのは難しいかもしれない。
+Unit 3 UE	What’s wrong? Shall I help you?	どうしましたか。お手伝いしましょうか。
+Unit 3 UE	I would like some bottled water and some food.	ボトルの水と食料が欲しいのですが。
+Unit 3 UE	I’m afraid all the water is sold out.	残念ですが，水はすべて売り切れです。
+Unit 3 UE	I should have come earlier.	もっと早く来るべきでした。
+Unit 3 UE	Will more food and water come in tomorrow morning?	明日の朝にはもっと多くの食料と水が入荷しますか。
+Unit 3 UE	You had better not go out tomorrow.	明日は外出しないほうがいいですよ。
+Unit 3 UE	Then, I will buy bottled green tea.	では，ボトルの緑茶を買います。
+Unit 3 FACT	You must finish this report on time.	あなたたちはこのレポートを時間どおりに仕上げなければいけません。
+Unit 3 FACT	The injury isn’t serious? You must be relieved!	けがは大したことないの？　ホッとしたでしょう！
+Unit 3 FACT	May I come in?	入ってよろしいでしょうか。
+Unit 3 FACT	We may go to Spain this summer.	私たちは今年の夏，スペインに行くかもしれません。
+Unit 3 FACT	It will rain tomorrow.	明日は雨になるでしょう。
+Unit 3 FACT	I’ll give you a hand.	私が手伝ってあげますよ。
+Unit 3 FACT	Kenji can run 100 meters in 11 seconds.	ケンジは100メートルを11秒で走ることができます。
+Unit 3 FACT	You can use my eraser.	私の消しゴムを使ってもいいよ。
+Unit 3 FACT	Tokyo can be very cold in April.	東京は４月にとても寒くなることがある。
+Unit 3 FACT	That can’t be true.　	それは本当のはずがない。
+Unit 3 FACT	You should be more careful with your money.	あなたはお金にもっと気をつけるべきです。
+Unit 3 FACT	I should be able to get to the restaurant by seven.	私はレストランには７時までには着けるはずですよ。
+Unit 3 FACT	Shall I help you?	お手伝いしましょうか。
+Unit 3 FACT	Shall we dance?	ダンスしましょうよ。
+Unit 3 FACT	You’d better call an ambulance!	救急車を呼んだほうがいいよ！
+Unit 3 FACT	I used to live in Gunma.	私は以前，群馬に住んでいました。
+Unit 3 FACT	This would be my eighth trip to Kyoto.	これで８回目の京都旅行になるのだろうな。
+Unit 3 FACT	Can [Will] you give me a hand?	手伝ってくれる？
+Unit 3 FACT	Could [Would] you open the window?	窓を開けていただけますか。
+Unit 3 FACT	Something may [might] have happened to her.	彼女に何かあったのかもしれない。
+Unit 3 FACT	They must have lost their way.	彼らは道に迷ったにちがいない。
+Unit 3 FACT	I could have left my smarｔphone at home.	私は家にスマートフォンを忘れたかもしれない。
+Unit 3 FACT	He can’t [couldn’t] have said thaｔ.	彼がそんなことを言ったわけがない。
+Unit 3 FACT	My mom should have arrived home by now.	お母さんは今頃，家に着いているはずですよ。
+Unit 3 FACT	I should have studied harder.	私はもっと一生懸命勉強すべきだった。
+Unit 4 UE	Why is 1,000 liters of water used to make one hamburger?	なぜハンバーガーを1つ作るのに1,000リットルの水が使われるの？
+Unit 4 UE	I was surprised at the amount.	その量に驚いたよ。
+Unit 4 UE	A hamburger is made from beef and bread.	ハンバーガーは牛肉とパンから作られている。
+Unit 4 UE	930 liters of water is used for 45 grams of beef.	930リットルの水が45グラムの牛肉に使われている。
+Unit 4 UE	It is used as drinking water for cattle.	それは牛の飲み水として使われている。
+Unit 4 UE	Why do you think water is needed for bread?	なぜパンに水が必要とされていると思う？
+Unit 4 UE	This hard work is done by women and children.	この大変な仕事は女性や子どもたちによって行われている。
+Unit 4 UE	In that case, this tool would be helpful.	その場合，この道具が役に立つでしょう。
+Unit 4 UE	It is called the Hippo Roller.	それはヒッポローラーと呼ばれている。
+Unit 4 UE	It is designed to transport water by rolling it.	それは転がすことによって水を輸送するように設計されている。
+Unit 4 UE	A lot of water can be transported easily.	大量の水を簡単に輸送することができる。
+Unit 4 UE	This has been used in many countries for a long time.	これは多くの国で長い間使われている。
+Unit 4 FACT	John was attacked by the dog.	ジョンはその犬に襲われた。
+Unit 4 FACT	English is spoken all over the world.	英語は世界中で話されている。
+Unit 4 FACT	We have been invited to Hiro’s New Year’s party.	私たちはヒロの新年会に呼ばれています。
+Unit 4 FACT	A new cafeteria is being built at our school.	私たちの学校では新しいカフェテリアが建てられているところです。
+Unit 4 FACT	Our school sports day will be held next Sunday.	私たちの学校の運動会は来週の日曜日に開催されます。
+Unit 4 FACT	Is French spoken in Canada?	カナダでフランス語は話されていますか。
+Unit 4 FACT	When was Botchan written by Natsume Soseki?	いつ『坊っちゃん』は夏目漱石によって書かれましたか。
+Unit 4 FACT	Some questions weren’t answered by the teacher.	いくつかの質問は先生に答えてもらえなかった。
+Unit 4 FACT	I was born and raised in London.	私はロンドンで生まれ育ちました。
+Unit 4 FACT	We were surprised at the news.	私たちはそのニュースを聞いて驚いた。
+Unit 4 FACT	My brother was injured in a skiing accident.	私の兄はスキーの事故でけがをした。
+Unit 4 FACT	Our science club was given an award.	私たちの科学クラブが賞を与えられた。
+Unit 4 FACT	An award was given to our science club.	賞が私たちの科学クラブに与えられた。
+Unit 4 FACT	Christopher is called Chris by his friends.	クリストファーは友人にクリスと呼ばれている。
+Unit 4 FACT	I was brought up in a big family.	私は大家族で育てられました。
+Unit 5 UE	I don’t want to waste food.	食品をむだにしたくない。
+Unit 5 UE	Let’s decide how to deal with it.	どう対処するか決めよう。
+Unit 5 UE	Do you want me to eat it?	僕が食べようか？
+Unit 5 UE	I’m glad to hear that.	それを聞いてうれしいよ。
+Unit 5 UE	Is it okay to take home only the meat?	肉だけ家に持ち帰ってもいいかな？
+Unit 5 UE	There isn’t enough space to keep a lot of food in the fridge.	冷蔵庫の中にはたくさんの食料を保管する場所が十分にないんだ。
+Unit 5 UE	You should use this ice pack to keep the meat cool.	肉を冷やしておくために，この保冷剤を使うべきだよ。
+Unit 5 UE	Let me check what surplus food you want to send.	どんな余った食料を送りたいのか確認させて。
+Unit 5 UE	Are they fresh enough to send?	それらは送るのに十分新鮮ですか。
+Unit 5 UE	They’re sure to be fresh.	それらは間違いなく新鮮だよ。
+Unit 5 UE	The food bank seems to accept them.	そのフードバンクはそれらを受け入れてくれるようだ。
+Unit 5 UE	We have to be careful not to make a mistake.	間違えないように気をつけないといけないね。
+Unit 5 FACT	To make new friends is not so easy.	新しい友だちを作ることはそれほど簡単ではありません。
+Unit 5 FACT	I like to play video games with my friends.	私は友だちとテレビゲームをするのが好きです。
+Unit 5 FACT	My goal is to find a cure for cancer.	私の目標はガンの治療法を見つけることです。
+Unit 5 FACT	It’s not so easy to make new friends.	新しい友だちを作ることはそれほど簡単ではありません。
+Unit 5 FACT	I think it strange to put pineapple on a pizza.	私はピザにパイナップルを載せるのは変だと思います。
+Unit 5 FACT	I have many teachers to help me.	私には手助けをしてくれる多くの先生がいる。
+Unit 5 FACT	I have a lot of homework to do.	私にはやるべき宿題がたくさんある。
+Unit 5 FACT	I don’t have time to relax.	私にはリラックスできる時間がありません。
+Unit 5 FACT	Many Japanese students go to Australia to practice English.	多くの日本人学生は，英語を練習するためにオーストラリアに行きます。
+Unit 5 FACT	My parents were delighted to hear about my excellent grades.	両親は私のよい成績を聞いて大喜びした。
+Unit 5 FACT	He grew up to be a famous singer.	彼は成長して有名な歌手になった。
+Unit 5 FACT	She must be rich to buy such an expensive car.	そんなに高い車を買うなんて，彼女はお金持ちにちがいない。
+Unit 5 FACT	I saw Mary cross the street.	私はメアリーが通りを渡るのを見た。
+Unit 5 FACT	The movie made me cry.	その映画を見て私は泣いてしまった。
+Unit 5 FACT	I’ll have my sister call you back.	私は妹に電話をかけ直させます。
+Unit 5 FACT	My daughter’s unhappy because I don’t let her go to concerts.	私がコンサートに行かせないから，娘は不満です。
+Unit 5 FACT	My parents always tell me to study harder.	両親はいつも，私にもっと一生懸命勉強をしなさいと言います。
+Unit 5 FACT	I want her to stay with us.	私は彼女に私たちと一緒にいてほしい。
+Unit 5 FACT	Try not to think too much.	考えすぎないようにしなさい。
+Unit 5 FACT	She seems to be happy in her new school.	彼女は新しい学校で楽しそうだ。
+Unit 5 FACT	Lucy seems to have been sick.	ルーシーは体調が悪かったみたいですね。
+Unit 5 FACT	Nobody likes to be scolded.	誰も怒られるのは好きではない。
+Unit 5 FACT	I don’t know what to say.	なんて言っていいのか私はわかりません。
+Unit 5 FACT	She is sure to win.	彼女は必ず勝つ。
+Unit 5 FACT	Are you old enough to drive a car?	あなたは運転できる年齢ですか。
+Unit 5 FACT	 I was too sad to speak.	私は悲しすぎて口がきけなかった。
+Unit 5 FACT	To be honest, I don’t like pizza.	正直に言って，私はピザが好きではありません。
+Unit 6 UE	I can’t stop playing online games.	オンラインゲームをするのがやめられないんだ。
+Unit 6 UE	Playing online games with my friends is a lot of fun.	友人とオンラインゲームをするのがとても楽しいんだ。
+Unit 6 UE	How about making rules about it?	ルールを設定するのはどう？
+Unit 6 UE	I suggest playing games for only one hour a day.	ゲームを１日１時間だけにするのはどうかな。
+Unit 6 UE	Eating breakfast is good for our health.	朝食を食べるのは健康にいい。
+Unit 6 UE	I can’t help eating sweets and snacks between meals.	甘いものやスナックを間食せずにはいられないんだ。
+Unit 6 UE	I’ve tried to stop the habit many times, but I can’t.	何度もその習慣をやめようとしたんだけど，できないんだ。
+Unit 6 UE	You can avoid getting hungry between meals.	食事の間にお腹がすくのを避けることができるよ。
+Unit 6 UE	I think it’s worth trying.	やってみる価値がありそうだね。
+Unit 6 UE	Thank you for giving me some good advice.	いいアドバイスをしてくれてありがとう。
+Unit 6 FACT	Making new friends is not so easy.	新しい友だちを作ることはそれほど簡単ではありません。
+Unit 6 FACT	I like playing video games with my friends.	私は友だちとテレビゲームをするのが好きです。
+Unit 6 FACT	My hobby is collecting stamps.	私の趣味は切手を集めることです。
+Unit 6 FACT	Ken is good at playing baseball.	ケンは野球をするのが得意です。
+Unit 6 FACT	I hope to see you again.	またお目にかかりたく存じます。
+Unit 6 FACT	Just stop calling me.	とにかく私に電話するのをやめてよ。
+Unit 6 FACT	Remember to lock the door when you go out.	外出するときにはドアに鍵をかけるのを忘れないように。
+Unit 6 FACT	I remember meeting her at a party.	私は彼女とパーティーで会ったことを覚えています。
+Unit 6 FACT	He tried to carry the heavy box, but he couldn’t.	彼はその重い箱を運ぼうとしましたが，できませんでした。
+Unit 6 FACT	He tried carrying the heavy box, and he got very tired.	彼はその重い箱を運んでみて，とても疲れました。
+Unit 6 FACT	Not wearing a helmet on a bike is dangerous.	ヘルメットをつけないで自転車に乗るのは危険です。
+Unit 6 FACT	I’m proud /of having been a student at this school.	私はこの学校の生徒だったことを誇りに思っている。
+Unit 6 FACT	Nobody likes being scolded.	誰も怒られるのは好きではない。
+Unit 6 FACT	I’m looking forward to seeing you next month.	来月あなたと会うのを楽しみにしています。
+Unit 6 FACT	I can’t help laughing at his jokes.	私は彼の冗談に笑わずにはいられない。
+Unit 6 FACT	How about having Thai food for lunch?	昼食にタイ料理を食べるのはどう？
+Unit 6 FACT	Her new book is worth reading.	彼女の新刊は読む価値があるよ。
+Unit 7 UE	I saw Mr. Maeda wearing a cute T-shirt.	前田さんがかわいいTシャツを着ているのを見た。
+Unit 7 UE	Some cheap T-shirts get damaged easily.	安いTシャツは傷みやすいものもある。
+Unit 7 UE	They sell T-shirts made of organic cotton.	オーガニックコットンのTシャツを販売している。
+Unit 7 UE	I like the T-shirt with a dog wearing sunglasses.	私はサングラスをかけたイヌのTシャツがいいな。
+Unit 7 UE	A bear sits holding a fish in its mouth.	クマが魚を口にくわえて座っている。
+Unit 7 UE	Oh, what a cute T-shirt!	ああ，なんてかわいいTシャツ！
+Unit 7 UE	I’m pleased to hear that you like it.	気に入っていただけてうれしいです。
+Unit 7 UE	The cute cat is looking at us with its arms folded.	そのかわいいネコは腕を組んで私たちを見ています。
+Unit 7 UE	This is a T-shirt made of organic cotton.	これはオーガニックコットンで作られたTシャツです。
+Unit 7 UE	I support clothing manufacturers making organic cotton clothes.	私はオーガニックコットンの服を作っている衣類製造業者を支援しているんだ。
+Unit 7 UE	Generally speaking, they don’t contain any harmful chemicals.	一般的に言って，それらには有害な化学物質は含まれていない。
+Unit 7 FACT	The man eating popcorn is my friend Bill.	ポップコーンを食べている男性は友人のビルです。
+Unit 7 FACT	This is the picture painted by my father.	これは父が描いた絵です。
+Unit 7 FACT	The baby kept crying.	赤ちゃんは泣き続けた。
+Unit 7 FACT	My racket got broken during the match.	私のラケットが試合中に壊れた。
+Unit 7 FACT	Sorry to keep you waiting.	あなたを待たせてごめんね。
+Unit 7 FACT	Keep the door locked.	ドアに鍵をかけておきなさい。
+Unit 7 FACT	I saw Mary crossing the street.	私はメアリーが通りを渡っているのを見た。
+Unit 7 FACT	I had my hair cut yesterday.	昨日髪をカットしてもらったよ。
+Unit 7 FACT	I was busy doing my homework.	私は宿題をするのに忙しかった。
+Unit 7 FACT	My daughter came home disappointed.	私の娘はがっかりして家に帰ってきた。
+Unit 7 FACT	She accepted the prize, smiling happily.	彼女はうれしそうにほほ笑みながら，賞品を受け取った。
+Unit 7 FACT	Pleased by her test result, she jumped for joy!	テストの結果がうれしくて，彼女はとび上がって喜んだ。
+Unit 7 FACT	Having visited New York before, she knew the good restaurants.	以前ニューヨークを訪れたことがあったので，彼女はおいしいレストランを知っていました。
+Unit 7 FACT	I listened to the music with my heart beating.	私は心を高鳴らせながらその曲を聞いた。
+Unit 7 FACT	Judging from the sky, it’s going to snow tonight.	空模様から判断すると，今夜は雪が降るね。
+Unit 8 UE	The snowman chocolate is the most popular product this month.	雪だるま型のチョコレートは今月一番人気がある商品です。
+Unit 8 UE	The chocolate bar is the second most popular.	その板チョコは二番目に人気があります。
+Unit 8 UE	It’s just as sweet as the snowman chocolate.	それは雪だるま型のチョコレートとちょうど同じくらい甘いです。
+Unit 8 UE	The chocolate bar is much healthier.	板チョコのほうがずっと健康的です。
+Unit 8 UE	The chocolate bar is more expensive than the snowman.	板チョコのほうが雪だるま型よりも値段が高いです。
+Unit 8 UE	You’re helping workers by buying it.	それを買うことによって労働者を助けることになります。
+Unit 8 UE	Local workers can earn more money.	地元の労働者はより多くのお金を稼ぐことができる。
+Unit 8 UE	They can have a more stable life.	彼らはもっと安定した生活を送ることができる。
+Unit 8 UE	They are encouraged to use fewer chemicals.	彼らはより少ない化学薬品を使用するよう推奨されている。
+Unit 8 UE	The fair trade market in Japan is getting larger and larger.	日本のフェアトレード市場はどんどん大きくなっている。
+Unit 8 FACT	Tom is as tall as Mary.	トムはメアリーと同じくらいの背の高さだ。
+Unit 8 FACT	I have as many CDs as Ken.	私はケンと同じくらいの数のCDをもっている。
+Unit 8 FACT	I’m not as tall as him.	私は彼ほど背が高くない。
+Unit 8 FACT	Our new cafeteria is twice as large as the old one.	私たちの新しいカフェテリアは以前のものの２倍の広さだ。
+Unit 8 FACT	Please drive more slowly.	もっとゆっくり運転してください。
+Unit 8 FACT	I became taller than him.	僕は彼よりも背が高くなった。
+Unit 8 FACT	Fruit is much cheaper in my country than in Japan.	果物は日本よりも私の国のほうがはるかに安い。
+Unit 8 FACT	Oh, that’s the best idea.	ああ，それは最高のアイデアですね。
+Unit 8 FACT	Who speaks English the most fluently in your family?	家族で誰が一番英語をすらすら話しますか。
+Unit 8 FACT	Tom is the tallest in his class.	トムはクラスでもっとも背が高い。
+Unit 8 FACT	Tom is the tallest of the three.	トムは３人のうちもっとも背が高い。
+Unit 8 FACT	Your English is getting better and better.	君の英語，どんどんよくなっているね。
+Unit 8 FACT	The younger you are, the easier it is to learn.	若ければ若いほど，学ぶのは易しい。
+Unit 8 FACT	This dictionary is less useful than that one.	この辞書はあの辞書ほど役に立たない。
+Unit 8 FACT	This is by far the best restaurant in town.	これは断然，街で最高のレストランです。
+Unit 8 FACT	K2 is the second highest mountain in the world.	K2は世界で２番目に高い山だ。
+Unit 8 FACT	Boston is one of the oldest cities in the U.S.	ボストンはアメリカでもっとも古い都市の１つです。
+Unit 9 UE	We can meet a lot of people who use English.	英語を使うたくさんの人と会えます。
+Unit 9 UE	I like something that we can do at home.	私は家でできることが好きです。
+Unit 9 UE	I understand what you are saying, but that way is not effective.	あなたの言うことはわかりますが，その方法は効果的ではありません。
+Unit 9 UE	The way which you suggested is not effective for speaking.	あなたが提案した方法は、話すのには効果的ではありません。
+Unit 9 UE	We can have lessons from teachers whose English skills are great.	英語の能力がすばらしい先生から授業を受けることができます。
+Unit 9 UE	What I want to do most is to participate in a study tour.	私がもっともやりたいのは，スタディツアーに参加することです。
+Unit 9 UE	I’d like to go to places where we can interact with local children.	地元の子どもたちとふれあえる場所に行きたいです。
+Unit 9 UE	I’m interested in the music studio, where we can see children playing music hard.	音楽スタジオに興味があります。そこでは子どもたちが懸命に音楽を演奏しているのを見ることができます。
+Unit 9 UE	That’s why I think it’s a great program.	だからそれがすばらしいプログラムだと思うんです。
+Unit 9 UE	I’m interested in activities in which we can learn about the environment.	環境について学べる活動に興味があります。
+Unit 9 UE	I’m not sure if it is safe.	安全かどうかわかりません。
+Unit 9 UE	The staff supports you whenever you need help.	困ったときにはいつでもスタッフがサポートしてくれます。
+Unit 9 FACT	I have a friend who wants to be an astronaut.	宇宙飛行士になりたい友だちがいます。
+Unit 9 FACT	I like stories which have happy endings.	私はハッピーエンドの物語が好きです。
+Unit 9 FACT	That is the man who I met on the train to Kyoto.	あの人が私が京都に行く電車で会った男性です。
+Unit 9 FACT	The dress which Ann bought is so cute!	アンが買ったドレスはすごくかわいい！
+Unit 9 FACT	I have a friend whose father is a lawyer.	私にはお父さんが弁護士をしている友だちがいます。
+Unit 9 FACT	This is the hospital in which I was born.	これが私が生まれた病院です。
+Unit 9 FACT	This is the hospital which I was born in.	これが私が生まれた病院です。
+Unit 9 FACT	The woman that lives next door is an artist.	隣に住んでいる女性は芸術家です。
+Unit 9 FACT	The car that I want to get is eco-friendly.	私が買いたい車は環境に配慮したものです。
+Unit 9 FACT	The human is the only animal that uses fire.	人間は火を使う唯一の動物だ。
+Unit 9 FACT	Yokohama is the city where I was born.	横浜は私が生まれた都市だ。
+Unit 9 FACT	Christmas is the day when the whole family gets together.	クリスマスは家族全員が集まる日です。
+Unit 9 FACT	I don’t know the reason why he got angry.	私は彼が腹を立てた理由がわかりません。
+Unit 9 FACT	She has a son, who is a college student.	彼女には息子が１人いて，大学生なのです。
+Unit 9 FACT	We stayed at the Grand Hotel, which some friends recommended to us.	私たちはグランドホテルに泊まりました。何人かの友だちが私たちに勧めてくれたところです。
+Unit 9 FACT	I’m going to spend two weeks in New York, where my brother lives.	私はニューヨークに２週間滞在する予定です。そこには兄が住んでいます。
+Unit 9 FACT	My dad is cooking dinner, which doesn’t happen very often.	父が夕食を作っているが，それはそんなによくあることではない。
+Unit 9 FACT	What he told me was a lie.	彼が私に言ったことはうそだった。
+Unit 9 FACT	My hometown today is different from what it was 15 years ago.	今では私の故郷は15年前とは違っている。
+Unit 9 FACT	You can eat whatever you like.	何でも好きなものを食べていいよ。
+Unit 9 FACT	I’ll be here for you whenever you need me.	あなたが私を必要なときはいつでもそばにいてあげるよ。
+Unit 9 FACT	Whoever I play against, I must win the next match.	対戦する相手が誰でも，私は次の試合に勝たなければなりません。
+Unit 9 FACT	However hard I tried, I couldn’t think of a good idea.	どんなに一生懸命頑張っても，よい考えを思いつきませんでした。
+Unit 9 FACT	He asked me if I wanted to have lunch with him.	彼は私に一緒に昼食を食べたいかどうかを尋ねた。
+Unit 10 UE	I’d like to go to a restaurant where I can eat delicious Japanese food.	おいしい日本食が食べられるレストランに行きたいのですが。
+Unit 10 UE	If you like seafood, I recommend the sushi restaurant Jubei.	もし魚介類がお好きなら，寿司屋「十兵衛」をおすすめします。
+Unit 10 UE	I wish I could eat sushi, but actually I’m a vegetarian.	寿司が食べられればよいのですが，実はベジタリアンなのです。
+Unit 10 UE	If I were you, I would go to this restaurant.	もし私があなただったら、このレストランに行きます。
+Unit 10 UE	I can ask the restaurant not to use dashi.	だしを使わないようにレストランに頼むことができます。
+Unit 10 UE	It was too crowded to walk around.	歩き回るには混雑しすぎていた。
+Unit 10 UE	It was very crowded. Otherwise, I could have enjoyed sightseeing more.	とても混雑していた。そうでなければ、もっと観光を楽しめたのに。
+Unit 10 UE	If there had been signboards with pictograms, it wouldn’t have happened.	もし絵文字付きの看板があったなら，それは起こらなかっただろう。
+Unit 10 UE	If I had been the tourist, I might not have understood the rule.	もし私がその観光客だったなら，私はその規則がわからなかったかもしれない。
+Unit 10 FACT	If you practiced more, you would be a better player.	＜実際はあまり練習しないが＞もっと練習したら、あなたは今よりよい選手になれるのになあ。
+Unit 10 FACT	If I were you, I wouldn’t do such things.	もし私があなただったら，そんなことはしないだろう。
+Unit 10 FACT	If you had asked me, I would have helped you.	もし私に頼んでくれたら，あなたを助けてあげたのに。
+Unit 10 FACT	I wish I had a brother.	＜実際はいないが＞弟がいたらなぁ。
+Unit 10 FACT	I wish I were rich.	＜実際はそうではないが＞お金持ちだったらなぁ。
+Unit 10 FACT	I have a stomachache. I wish I hadn’t eaten so much chocolate!	おなかが痛い。〈実際には食べたのだが〉あんなにたくさんチョコレートを食べなければよかった！
+Unit 10 FACT	Without my parents’support, I couldn’t have graduated from college.	両親の援助がなかったら、私は大学を卒業することはできなかったろうな。
+Unit 10 FACT	Something strange is happening. Otherwise, he would not act like this.	何か妙なことが起こっている。そうでなければ彼がこんなふうに振る舞うわけはない。
+    </script>
+</body>
+</html>

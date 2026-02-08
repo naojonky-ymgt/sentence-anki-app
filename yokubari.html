@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文暗誦フラッシュカード (よくばり英作文)</title>
+    <style>
+        /* デザイン設定 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 750px;
+            width: 100%;
+            padding: 40px;
+            min-height: 550px;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; font-size: 28px; }
+        
+        .setup-section { background: #f5f5f5; padding: 30px; border-radius: 8px; margin-bottom: 30px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        select { padding: 12px; width: 100%; max-width: 300px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; margin-bottom: 15px; }
+        .order-options { margin-bottom: 20px; font-size: 14px; }
+        .order-options label { margin: 0 10px; cursor: pointer; }
+
+        button { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #667eea; color: white; width: 100%; max-width: 250px; font-size: 16px; margin: 0 auto; }
+        
+        .practice-section { display: none; flex: 1; flex-direction: column; }
+        .practice-section.active { display: flex; }
+        .progress-bar { background: #e0e0e0; height: 6px; border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
+        .progress-fill { background: #667eea; height: 100%; width: 0%; transition: width 0.3s; }
+        
+        /* モードセレクタ */
+        .mode-selector { display: flex; gap: 4px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
+        .mode-btn { padding: 6px 10px; border: 1px solid #ddd; background: white; font-size: 10px; cursor: pointer; }
+        .mode-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        /* 再生ボタン専用スタイル */
+        .btn-audio-top {
+            padding: 6px 10px; 
+            border: 1px solid #4a5568; 
+            background: #4a5568; 
+            color: white; 
+            font-size: 10px; 
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 3px;
+        }
+        .btn-audio-top:hover { background: #2d3748; }
+
+        .card-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fdfdfd; border: 2px solid #eee; border-radius: 12px; padding: 30px; margin-bottom: 20px; position: relative; min-height: 250px; }
+        .unit-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; background: #eee; padding: 2px 8px; border-radius: 4px; }
+        .question-text { font-size: 22px; color: #333; text-align: center; margin-bottom: 20px; }
+        .question-subtext { font-size: 18px; color: #666; text-align: center; padding-top: 15px; border-top: 1px solid #eee; width: 100%; }
+        
+        .input-ui, .voice-ui { width: 100%; display: none; margin-top: 15px; }
+        .input-ui.active, .voice-ui.active { display: block; }
+        #answerInput { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
+        
+        .voice-ui { text-align: center; }
+        .mic-btn { background: #f8d7da; color: #721c24; border-radius: 50%; width: 50px; height: 50px; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; }
+        .mic-btn.listening { background: #dc3545; color: white; animation: pulse 1.5s infinite; }
+        
+        .diff-display { margin-top: 15px; font-size: 18px; line-height: 1.6; text-align: center; display: none; background: #fff; padding: 10px; border-radius: 8px; width: 100%; }
+        .word-correct { color: #28a745; font-weight: bold; margin: 0 3px; }
+        .word-wrong { color: #dc3545; text-decoration: line-through; margin: 0 3px; font-size: 0.85em; opacity: 0.6; }
+        .word-missing { color: #dc3545; font-weight: bold; border-bottom: 2px solid #dc3545; margin: 0 3px; }
+        .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #333; color: #fff; font-size: 14px; margin-bottom: 10px; }
+
+        .answer-display { width: 100%; text-align: center; margin-top: 15px; display: none; background: #f0f4ff; padding: 15px; border-radius: 8px; }
+        
+        .evaluation-buttons { display: none; gap: 10px; width: 100%; margin-top: 15px; flex-wrap: wrap; }
+        .btn-status { flex: 1; padding: 15px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; font-weight: bold; min-width: 100px; }
+        .btn-remembered { background: #d4edda; color: #155724; }
+        .btn-so-so { background: #fff3cd; color: #856404; }
+        .btn-forgotten { background: #f8d7da; color: #721c24; }
+        
+        .btn-back { width: 100%; background: #e2e8f0; color: #4a5568; margin-top: 10px; padding: 10px; font-size: 13px; border-radius: 8px; border:none; cursor:pointer; }
+        .stats { font-size: 12px; color: #666; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🃏 英文暗誦 PRO 〜 よくばり英作文</h1>
+        
+        <div class="setup-section" id="setupSection">
+            <select id="unitSelect"></select>
+            <div class="order-options">
+                <label><input type="radio" name="playOrder" value="sequence" checked> 番号順</label>
+                <label><input type="radio" name="playOrder" value="random"> ランダム</label>
+            </div>
+            <button class="btn-primary" onclick="startPractice()">学習開始</button>
+        </div>
+        
+        <div class="practice-section" id="practiceSection">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            
+            <div class="mode-selector">
+                <button class="btn-audio-top" onclick="playAudio()">🔊 音声再生 (0)</button>
+                
+                <button class="mode-btn active" onclick="setMode(1)">1: 穴30%</button>
+                <button class="mode-btn" onclick="setMode(2)">2: 穴50%</button>
+                <button class="mode-btn" onclick="setMode(3)">3: 頭文字</button>
+                <button class="mode-btn" onclick="setMode(4)">4: 和訳</button>
+                <button class="mode-btn" onclick="setMode(5)">5: タイピング</button>
+                <button class="mode-btn" onclick="setMode(6)">6: 音声</button>
+            </div>
+            
+            <div class="card-area">
+                <div class="unit-badge" id="questionUnit"></div>
+                <div class="question-text" id="questionText"></div>
+                <div class="question-subtext" id="questionSubtext"></div>
+                
+                <div class="input-ui" id="inputUI">
+                    <input type="text" id="answerInput" placeholder="英文を入力..." autocomplete="off">
+                </div>
+                <div class="voice-ui" id="voiceUI">
+                    <button id="micBtn" class="mic-btn" onclick="toggleListening()">🎤</button>
+                    <div id="voiceStatus" style="font-size:11px; color:#888; margin-top:5px;">クリックして話す</div>
+                </div>
+
+                <div id="diffResult" class="diff-display"></div>
+
+                <div class="answer-display" id="answerDisplay">
+                    <div id="correctText" style="font-weight:bold; font-size:20px;"></div>
+                </div>
+            </div>
+
+            <div style="text-align:center; min-height: 120px;">
+                <button class="btn-primary" id="showAnswerBtn" onclick="showAnswer()">答えを確認 (Enter)</button>
+                
+                <div class="evaluation-buttons" id="evalButtons">
+                    <button class="btn-status btn-remembered" onclick="record(1)">😄 覚えた (J)</button>
+                    <button class="btn-status btn-so-so" onclick="record(2)">😐 まあまあ (K)</button>
+                    <button class="btn-status btn-forgotten" onclick="record(3)">😰 忘れた (L)</button>
+                    <button class="btn-back" id="backBtn" onclick="goBack()">⬅ 前のカードに戻る</button>
+                </div>
+            </div>
+            
+            <div class="stats" id="statsText"></div>
+            <button onclick="location.reload()" style="background:none; border:none; color:#999; cursor:pointer; font-size:11px; margin-top:10px; width:100%;">Unit選択へ戻る</button>
+        </div>
+    </div>
+
+    <script>
+        let allItems = [];
+        let currentList = [];
+        let retryList = [];
+        let idx = 0;
+        let mode = 1;
+        let stats = { 1:0, 2:0, 3:0 };
+        let history = [];
+
+        // 音声認識
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = SpeechRecognition ? new SpeechRecognition() : null;
+        if(recognition) {
+            recognition.lang = 'en-US';
+            recognition.onstart = () => { document.getElementById('micBtn').classList.add('listening'); };
+            recognition.onresult = (e) => { compareHighPrecision(e.results[0][0].transcript); showAnswer(); };
+            recognition.onend = () => { document.getElementById('micBtn').classList.remove('listening'); };
+        }
+
+        // テキスト読み上げ (Text-to-Speech)
+        function playAudio() {
+            if (!window.speechSynthesis) {
+                alert("お使いのブラウザは音声読み上げに対応していません。");
+                return;
+            }
+            const item = currentList[idx];
+            // 読み上げ設定
+            const uttr = new SpeechSynthesisUtterance(item.eng);
+            uttr.lang = 'en-US'; 
+            uttr.rate = 1.0; // 速度
+            
+            // 既存の読み上げをキャンセルして再生
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(uttr);
+        }
+
+        function initData() {
+            const raw = document.getElementById('studyData').textContent.trim();
+            raw.split('\n').forEach(line => {
+                const cols = line.split('\t');
+                if(cols.length >= 3) allItems.push({ unit: cols[0], eng: cols[1].trim(), jpn: cols[2].trim() });
+            });
+            const unitSet = [...new Set(allItems.map(i => i.unit))];
+            unitSet.forEach(u => {
+                const op = document.createElement('option');
+                op.value = u; op.textContent = u; document.getElementById('unitSelect').appendChild(op);
+            });
+        }
+
+        function startPractice() {
+            const sel = document.getElementById('unitSelect').value;
+            currentList = allItems.filter(i => i.unit === sel);
+            if(document.querySelector('input[name="playOrder"]:checked').value === 'random') {
+                currentList.sort(() => Math.random() - 0.5);
+            }
+            idx = 0; stats = {1:0, 2:0, 3:0}; history = []; retryList = [];
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('practiceSection').classList.add('active');
+            show();
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', i+1 === m));
+            show();
+        }
+
+        function show() {
+            window.speechSynthesis.cancel(); // ページめくり時に音声を停止
+            const item = currentList[idx];
+            document.getElementById('questionUnit').textContent = item.unit;
+            document.getElementById('questionSubtext').textContent = item.jpn;
+            document.getElementById('correctText').textContent = item.eng;
+            document.getElementById('answerDisplay').style.display = 'none';
+            document.getElementById('showAnswerBtn').style.display = 'block';
+            document.getElementById('evalButtons').style.display = 'none';
+            document.getElementById('diffResult').style.display = 'none';
+            document.getElementById('answerInput').value = '';
+            document.getElementById('inputUI').classList.toggle('active', mode === 5);
+            document.getElementById('voiceUI').classList.toggle('active', mode === 6);
+            document.getElementById('backBtn').style.visibility = (idx === 0) ? 'hidden' : 'visible';
+
+            let display = "";
+            if (mode === 5) display = "タイピングしてください";
+            else if (mode === 6) display = "話してください";
+            else if (mode === 4) display = "???";
+            else {
+                const words = item.eng.split(/(\s+)/);
+                const rate = (mode === 1) ? 0.3 : (mode === 2) ? 0.5 : 0;
+                display = words.map(w => {
+                    if(!/\w/.test(w)) return w;
+                    if(mode === 3) return w[0] + ".".repeat(w.length-1);
+                    return Math.random() < rate ? "____" : w;
+                }).join("");
+            }
+            document.getElementById('questionText').textContent = display;
+            if(mode === 5) setTimeout(() => document.getElementById('answerInput').focus(), 50);
+            updateUI();
+        }
+
+        function showAnswer() {
+            if (mode === 5) compareHighPrecision(document.getElementById('answerInput').value);
+            document.getElementById('answerDisplay').style.display = 'block';
+            document.getElementById('showAnswerBtn').style.display = 'none';
+            document.getElementById('evalButtons').style.display = 'flex';
+        }
+
+        /**
+         * 高精度判定ロジック
+         * 引用符(" ' “ ” ‘ ’)を無視する設定に修正
+         */
+        function compareHighPrecision(userInput) {
+            const correctVal = currentList[idx].eng;
+            
+            // クリーニング関数: 記号を消して小文字にする
+            // ダブルクォーテーション、スマートクォート、アポストロフィー(’ ' ‘)を削除対象に追加
+            const clean = (t) => t.toLowerCase().replace(/[.,!?"'“”‘’]/g, "").trim();
+            
+            const userWords = userInput.split(/\s+/).filter(w => w !== "").map(clean);
+            const correctWords = correctVal.split(/\s+/).filter(w => w !== "").map(clean);
+            const originalCorrectWords = correctVal.split(/\s+/).filter(w => w !== "");
+
+            // DPテーブルの作成
+            const n = userWords.length;
+            const m = correctWords.length;
+            const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+
+            for (let i = 0; i <= n; i++) dp[i][0] = i;
+            for (let j = 0; j <= m; j++) dp[0][j] = j;
+
+            for (let i = 1; i <= n; i++) {
+                for (let j = 1; j <= m; j++) {
+                    if (userWords[i - 1] === correctWords[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1];
+                    } else {
+                        dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
+                    }
+                }
+            }
+
+            // バックトレース
+            let i = n, j = m;
+            const resultHtmlParts = [];
+            let correctCount = 0;
+
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && userWords[i - 1] === correctWords[j - 1]) {
+                    resultHtmlParts.unshift(`<span class="word-correct">${originalCorrectWords[j - 1]}</span>`);
+                    correctCount++;
+                    i--; j--;
+                } else if (j > 0 && (i === 0 || dp[i][j - 1] <= dp[i - 1][j] && dp[i][j - 1] <= dp[i - 1][j - 1])) {
+                    resultHtmlParts.unshift(`<span class="word-missing">${originalCorrectWords[j - 1]}</span>`);
+                    j--;
+                } else {
+                    resultHtmlParts.unshift(`<span class="word-wrong">${userWords[i - 1]}</span>`);
+                    i--;
+                }
+            }
+
+            const score = correctWords.length > 0 ? Math.round((correctCount / correctWords.length) * 100) : 0;
+            const diffArea = document.getElementById('diffResult');
+            diffArea.innerHTML = `<div class="score-badge">一致率: ${score}%</div><br>${resultHtmlParts.join(" ")}`;
+            diffArea.style.display = 'block';
+        }
+
+        function record(s) {
+            window.speechSynthesis.cancel(); // 次へ行く時に停止
+            if (s !== 1) retryList.push(currentList[idx]);
+            history.push({status: s, item: currentList[idx], wasInRetry: (s !== 1)});
+            stats[s]++;
+            idx++;
+
+            if (idx < currentList.length) show();
+            else {
+                if (retryList.length > 0) {
+                    alert(`覚えていない ${retryList.length} 件を復習します。`);
+                    currentList = [...retryList];
+                    retryList = []; idx = 0; stats = { 1:0, 2:0, 3:0 }; history = [];
+                    show();
+                } else {
+                    alert("全カード完了！");
+                    location.reload();
+                }
+            }
+        }
+
+        function goBack() {
+            window.speechSynthesis.cancel();
+            if (idx > 0) {
+                idx--;
+                const lastAction = history.pop();
+                stats[lastAction.status]--;
+                if (lastAction.wasInRetry) retryList.pop();
+                show();
+            }
+        }
+
+        function toggleListening() { if(recognition) try{ recognition.start(); }catch(e){ recognition.stop(); } }
+
+        function updateUI() {
+            document.getElementById('progressFill').style.width = (idx / currentList.length * 100) + "%";
+            document.getElementById('statsText').textContent = `覚: ${stats[1]} / 普: ${stats[2]} / 忘: ${stats[3]}`;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') {
+                if(e.key === 'Enter') showAnswer();
+                return;
+            }
+            
+            // ショートカット 0 を追加
+            if(e.key === '0') playAudio();
+
+            const isAnsVisible = document.getElementById('evalButtons').style.display === 'flex';
+            if (e.key === 'Enter' && !isAnsVisible) showAnswer();
+            if (e.key >= '1' && e.key <= '6') setMode(parseInt(e.key));
+            if (isAnsVisible) {
+                if (e.key.toLowerCase() === 'j') record(1);
+                if (e.key.toLowerCase() === 'k') record(2);
+                if (e.key.toLowerCase() === 'l') record(3);
+                if (e.key === 'Backspace' || e.key === 'ArrowLeft') goBack();
+                // 一応Pも残しておきますが、0で動作します
+                if (e.key.toLowerCase() === 'p') playAudio();
+            }
+        });
+
+        window.onload = initData;
+    </script>
+
+    <script id="studyData" type="text/plain">
+Unit 1(主語)	"I've been getting too many spam e-mails. " "You should change your e-mail address."	「迷惑メールばっかり来る」「メアド変えたら」
+Unit 1(主語)	Our school building is fifty years old. The roof leaks badly.	うちの学校は築50年。雨もりがひどい。
+Unit 1(主語)	The weather is comfortable in fall.	秋は過ごしやすい。
+Unit 1(主語)	In Japan, you can readily buy a variety of things such as soft drinks and cigarettes from vending machines.	日本では、自動販売機でジュースやタバコなどさまざまなものが簡単に買える。
+Unit 1(主語)	If you look at anything from a different point of view, you may discover something new.	どんなものでも視点を変えれば、新たな発見があるかもしれない。
+Unit 1(主語)	When you are about forty years old, you become aware that your lifetime is limited.	人間は40歳ぐらいになると、人生には限りがあると気づくものだ。
+Unit 1(主語)	When you travel by train, you can read, doze, and gaze at the world outside.	列車の旅は、読書をしたり、うたた寝したり、外の風景をゆっくり眺めたりする余裕がある。
+Unit 1(主語)	When the garlic gives off a nice smell, it is time to add the egg.	ニンニクのいい香りがしてきたら、卵を入れるタイミングです。
+Unit 1(主語)	I have an important history exam in two weeks, so I have to study every day.	２週間後に大切な歴史の試験があるので、毎日勉強しなければならない。
+Unit 1(主語)	Yesterday, we had our sports day, and I took part in the tug-of-war. All of my joints are aching today.	昨日運動会があり、綱引きに参加したから、今日は身体の節々が痛い。
+Unit 1(主語)	Some people believe that if they have a large vocabulary, they can write well.	語彙が豊富なら良い文章が書けると信じている人がいる。
+Unit 1(主語)	These days, the number of people who want to live in the country is increasing.	最近、自然の中で暮らしたいという人が増えている。
+Unit 1(主語)	Overseas school trips are becoming more and more common.	修学旅行先を海外にする学校が増えている。
+Unit 1(主語)	"How did you like your trip to Mongolia? " "I enjoyed it a lot."	「モンゴルへの旅はどうでしたか？」「よい思い出がたくさんできました」
+Unit 1(主語)	Americans often call you by your first name regardless of age or status.	アメリカ人は年齢や地位に関係なく、相手をファーストネームで呼ぶことが多い。
+Unit 1(主語)	It is said that left-handed people have a better sense of space, and make better architects, than others.	左利きの人は空間把握力に優れ、建築家に向いていると言われている。
+Unit 1(主語)	Millions of women around the world have to work extremely long hours for almost nothing.	ただ同然で極めて長い時間働かねばならない女性が、世界中に何百万人といる。
+Unit 1(主語)	A child can suddenly run into the street, so you should hold his hand tightly and watch him carefully.	子供はいきなり道路に飛び出すことがあるので、しっかり手をつなぎ、目を離さないように。
+Unit 1(主語)	Those who have confidence are calm and broad-minded.	自信のある人は、落ち着きがあるし余裕もある。
+Unit 1(主語)	I do not have much physical strength these days, and I get short of breath when I go upstairs.	最近体力がなくなって、階段を上がると息切れする。
+Unit 1(主語)	"I have hay fever and am also allergic to cats. " "My sister has the same problem."	「僕は花粉症で、おまけに猫アレルギーだ」「私の妹も同じなの」
+Unit 1(主語)	"I'm losing my concentration. I think I'll have some coffee. " "Me, too."	「集中力が落ちてきた。コーヒーにしようかな」「じゃ私も」
+Unit 1(主語)	"Lucy has a nice figure, and log hair suits her well. " "Yes, I envy her."	「ルーシーは抜群にスタイルがいいし、長い髪がよく似合うね」「うん。羨ましい」
+Unit 1(主語)	In this town they collect different kinds of trash on different days, so please sort your trash before you put it out.	この町ではゴミは分別回収ですから、出す前にゴミを分けてください。
+Unit 1(主語)	In Japan, a lot of restaurants serve special food made from local ingredients.	日本には、地域の素材を活かした独自の料理を提供する店が多い。
+Unit 1(主語)	This Korean barbecue restaurant offers all-you-can-eat in 90 minutes for three thousand yen.	「この焼肉店は90分3,000円で食べ放題だよ」"
+Unit 1(主語)	Very few youngsters give up their seats to elderly people on trains.	電車の中でお年寄りに席を譲る若者が、本当に少ない。
+Unit 1(主語)	Nobody recognizes Jim since he has grown a beard and shaved his head.	ジムはあごひげをはやしているし、頭も丸めたので、誰も彼がジムだとわからない。
+Unit 1(主語)	The staff here aren't very polite, but you can rely on the food to be nice.	「ここは店員の態度はあまりよくないけど、味は確かだね」
+Unit 1(主語)	We walk around campus picking up empty cans every Monday morning.	私たちは、毎週月曜日の朝にキャンパスを回って、空き缶を拾っています。
+Unit 1(主語)	Why don't we have some tea at McDonald's first and then make plans for the rest of the day?	「とりあえずマックでお茶して、あとどうするか決めようよ」
+Unit 1(主語)	Since we're having a big sale next month, more staff should be hired.	「来月はバーゲンセールだから、スタッフの数を増やすべきです」
+Unit 1(主語)	Democracy is based on each citizen having an equal vote.	民主主義の基盤は、市民１人１人が平等な投票権を持つことにある。
+Unit 1(主語)	These glasses aren't the right strength for me. " "OK. I'll give you an eye test."	「このメガネ、度が合ってないんです」「わかりました。視力検査をしますね」
+Unit 1(主語)	November is the busiest tourist season in Kyoto due to the wonderful autumn colors.	京都では、11月は紅葉が見事なので、かき入れ時です。
+Unit 1(主語)	One out of three marriages ends in divorce.	結婚したカップルのうち３組に１組は、離婚している。
+Unit 1(主語)	Digital cameras are becoming smaller in size and more sophisticated.	デジタルカメラは小型化して、ますます精巧になっている。
+Unit 1(主語)	Everyone should be free to decide when to get married and whether to have children.	いつ結婚するか、子供を産むか産まないかなどは、各人の自由な判断によるべきだ。
+Unit 1(主語)	"Do you have the latest issue of Time Magazine? " "Sorry, it's sold out. Some back numbers are available, though."	「タイムの最新号はありますか？」「すいません。売り切れました。バックナンバーならありますが」
+Unit 1(主語)	"Watch out! There's some broken glass on the floor. " "What happened?"	「気をつけて。床に割れたガラスがおちてるから」「どうしたの？」
+Unit 1(主語)	"What do you think of our new trainee teacher? " "There's something funny about him."	「今度の教育実習生のこと、どう思う？」「何となく面白いところがあるよね」
+Unit 1(主語)	The apartment (that) I bought last month is a ten-minute walk from my parents' house.	先月買ったマンションは実家から10分のところにある。
+Unit 1(主語)	Mountain climbing is attractive not only because you can enjoy beautiful scenery, but also because it is good aerobic exercise.	登山の魅力は、美しい風景を楽しむことだけでなく、よい有酸素運動になることにもある。
+Unit 1(主語)	You should stay at that hotel. You have splendid views of Lake Toya from its rooms.	「そのホテルに泊まるのがいいよ。部屋の窓から洞爺湖の素晴らしい景色が一望できるからね」
+Unit 2(時制)	These days, Polly refuses to go to school and locks herself in her room.	最近、ポーリーは不登校になり、部屋に閉じこもっている。
+Unit 2(時制)	When I get home, my dog rushes to the door, wagging his tail in delight.	うちの犬は、私が帰宅すると、喜んでしっぽを振って玄関まで飛んで来る。
+Unit 2(時制)	"How do you spend your weekends? " "I usually just sit around the house."	「土日は何して過ごしてるの？」「だいたい家でゴロゴロしています」
+Unit 2(時制)	My son always puts ketchup and mayonnaise on his scrambled eggs.	「うちの息子はスクランブルエッグにいつもケチャップとマヨネーズをかけるんだ」
+Unit 2(時制)	Whenever I feel stressed out, I go to the beach near my house and listen to the soothing sound of the waves.	私はストレスを感じたら、いつも家の近くの浜辺へ出かけて、癒してくれる波の音を聞くことにしている。
+Unit 2(時制)	"What do you do? " "I left my job last year and now I'm a stay-at-home wife."	「何をなさっているんですか？」「昨年仕事を辞め、今は専業主婦です」
+Unit 2(時制)	Kenji is working hard to improve his math by going to a cram school every night.	ケンジは毎晩塾に行って、数学の成績を上げようと懸命に努力している。
+Unit 2(時制)	The flu is going around. In order to keep from catching it, you should gargle and wash your hands regularly.	インフルエンザが流行っています。予防にはうがいや手洗いを励行すべきです。
+Unit 2(時制)	"May I help you? " "Thank you, but I'm already being served."	「いらっしゃいませ。お伺いしましょうか？」「ありがとう。もう他の人にお願いしています」
+Unit 2(時制)	You're always complaining that your boss gives you too much work. Keep your chin up!	「君は上司が仕事をさせすぎると文句ばっかり言ってるね。もっと前向きに考えたら」
+Unit 2(時制)	I have gained weight recently, so I am afraid of stepping on the scales!	最近太ったから、体重計に乗るのが怖い。
+Unit 2(時制)	This canned tuna has passed its best-before date, but do you think it's OK?	「このツナ缶、賞味期限が切れているけど、大丈夫だと思う？」
+Unit 2(時制)	I have not decided where, but I want to live in Europe someday.	まだどこかは決めていないが、いつかヨーロッパに住んでみたいと思っている。
+Unit 2(時制)	Last month, I had a big fight with my boyfriend and we broke up.	先月彼と大げんかして別れた。
+Unit 2(時制)	When I was waiting in the checkout line at a convenience store, I ran into a friend from high school.	コンビニのレジで順番を待っていると、高校の友達にばったり出会った。
+Unit 2(時制)	When I went to a friend's wedding reception, I met many old friends from college.	友人の結婚式に行ったとき、大学時代の多くの同級生に会った。
+Unit 2(時制)	Global warming has a serious effect on the earth's whole ecosystem.	地球温暖化は地球の生態系全体に深刻な影響を与えている。
+Unit 2(時制)	Gordon is very clumsy. Yesterday he fell down the stairs, and today he spilled coffee all over his laptop.	ゴードンはとてもそそっかしい。昨日は階段で転び、今日は自分のノートパソコンの上にコーヒーをこぼした。
+Unit 2(時制)	The company went through a bad time last year, but recently things have been improving.	その会社は、昨年は大変だったが、近頃は状況が上向いている。
+Unit 2(時制)	"Have you ever been to Germany? " "Yes. I took a trip there twice when I was single."	「ドイツには行ったことがありますか？」「はい。独身の時に２回行ったことがあります」
+Unit 2(時制)	"This is the first time I've ever been bungee jumping. " "Don't worry. It's a piece of cake."	「バンジージャンプをするのは、今回が初めてです」「大丈夫。簡単だよ」
+Unit 2(時制)	"I've never had such delicious stew. " "Thank you. How about another helping?"	「こんな美味しいシチューを食べたのは初めてです」「ありがとう。お代わりはどうですか？」
+Unit 2(時制)	Ever since Craig won a fortune in the lottery, he has been neglecting his work and gambling a lot.	クレイグは宝くじで大金を手にしてから、仕事を怠り、ギャンブルに明け暮れている。
+Unit 2(時制)	Time flies! It has been three years since I came to Thailand to study.	時がたつのは早いもので、タイに留学して３年になります。
+Unit 2(時制)	"How long have you and Samantha known each other? " "For just one month."	「あなたとサマンサが知り合って、どれくらいになるのですか？」「まだたったの１ヶ月」
+Unit 2(時制)	I've been very busy with work for the last few days, so I'd like to relax this weekend.	「ここ数日仕事に追われていたので、週末はゆっくりしたい」
+Unit 2(時制)	When I was young, I learned about French cuisine while working at a three-star restaurant in Paris.	私は若い頃、パリの三つ星レストランでフランス料理の修行をした。
+Unit 2(時制)	Kate seemed nervous on stage, even though she had practiced her lines over and over.	ケイトは自分のセリフを繰り返し練習したのに、舞台に上がった時、緊張しているようだった。
+Unit 2(時制)	Roger came third in the Honolulu Marathon, even though he had never run that distance before.	ロジャーはマラソン初挑戦なのに、ホノルルマラソンでは３位だった。
+Unit 2(時制)	On my way to the station, I came across the bicycle (that) I had lost a few days before.	駅に行く途中、数日前になくした自転車を偶然見つけました。
+Unit 2(時制)	Yesterday, Jack called to tell me that he was going to be at the bar by two o'clock. I waited there until three o'clock, but he never showed up.	昨日ジャックは電話で２時までにはバーに行くと言ってたので、３時まで待ったのに、とうとう現れなかった。
+Unit 2(時制)	Ten years ago, no one imagined that LCDs would be this cheap.	10年前、液晶画面がこんなに安くなるなんて想像した人は誰もいなかった。
+Unit 2(時制)	If you do nothing but study, you will end up being narrow-minded.	勉強ばかりしていると、視野の狭い人間になってしまう。
+Unit 2(時制)	"Are you ready to order, sir? " "I'll have what he's having."	「ご注文はお決まりですか？」「あの人が食べているのと同じのをください」
+Unit 2(時制)	I've caught a cold and have a fever of almost 40℃, so I won't be able to go to the meeting today.	「風邪をひいて熱が40度近く出たので、今日の会議に参加できません」
+Unit 2(時制)	The train (that) I'm taking leaves at ten o'clock, so I'll leave home at nine thirty.	「10時の電車なので、９時半に家を出るつもり」
+Unit 2(時制)	After visiting Los Angeles, I'll be trying my luck in the casinos of Las Vegas!	「ロサンジェルスに行った後、ラスベガスのカジノで運試しをすることになっています」
+Unit 2(時制)	I haven't been well lately. I'm planning to take two weeks off.	「近頃体調がよくありません。２週間ほど仕事を休もうと考えています」
+Unit 2(時制)	I suggest that we (should) have a party to celebrate our grandparents' 50th wedding anniversary.	祖父母の金婚式を祝うために、パーティーを開いてはどうだろう。
+Unit 2(時制)	Joe's wife demanded that he stop going out on Saturday nights to save money.	ジョーは、節約のため土曜日の夜は出歩かないよう、妻から要求された。
+Unit 3(SVC)	My birthday is in May.	私の誕生日は５月です。
+Unit 3(SVC)	Mr. Thomas is a competent scholar, but he is terrible with children.	トーマス先生は有能な学者だが、子供と接するのはひどく苦手だ。
+Unit 3(SVC)	One problem with buying books on the Internet is that it is difficult to judge whether they are really worth reading.	インターネットで本を買うことの欠点の１つは、その本が本当に読むに値するものかどうかの判断が難しいことだ。
+Unit 3(SVC)	The problem with airlines is that they are often affected by snow.	飛行機には、雪に弱いという難点がある。
+Unit 3(SVC)	"When is your manuscript due? " "Next Monday, which is bad!"	「原稿の締め切りはいつ？」「来週の月曜日。やばいよ」
+Unit 3(SVC)	One of the main purposes of the World Cup is to promote friendship among nations.	ワールドカップの主な目的の１つは、国家間の友好を促進することである。
+Unit 3(SVC)	One of the main pleasures of New Year's Day is reading New Year's cards while drinking sake.	元旦の主な楽しみの１つは、酒を飲みながら年賀状に目を通すことである。
+Unit 3(SVC)	The best thing about staying in New Zealand was that everyone in my host family was very kind to me.	ニュージーランドのホームステイで一番良かったことは、ホストファミリーのみんながとても優しかったことでした。
+Unit 3(SVC)	"How should I cook this? " "All (that) you have to do is microwave it for ten minutes."	「これどうやって調理するの？」「レンジで10分チンするだけだよ」
+Unit 3(SVC)	The first thing (that) you should do to impress a girl is (to) make her laugh.	女の子に覚えてもらうためには、何よりもまず笑わせることだ。
+Unit 3(SVC)	In order to organize your plans, the first thing to do is (to) set priorities.	計画を立てるときには、まずは優先順位をつけることです。
+Unit 3(SVC)	The best thing (that) I can do to protect nature is (to) turn off the lights when I am not using them.	自然を守るために私にできることといったら、電気をこまめに消すことぐらいだ。
+Unit 3(SVC)	This organic fruit jam contains no preservatives and will quickly go bad.	この有機栽培の果物を使ったジャムは、防腐剤が含まれていないので、腐るのが早い。
+Unit 3(SVC)	"Would you like some coffee? " "I'm fine, thank you."	「コーヒーはいかがですか？」「いいえ、結構です」
+Unit 3(SVC)	This graph shows that the national unemployment rate remained fairly steady between 2000 and 2005.	このグラフによると、その国の失業率は2000年から2005年まではほぼ一定している。
+Unit 3(SVC)	"You look great in that beige dress. " "Thank you."	「そのベージュのワンピース、とてもよく似合っているよ」「ありがとう」
+Unit 4(SVOO)	Last month, my parents sent me a box of satsuma oranges by courier service.	先月、両親が宅配便でミカンを１箱送ってくれた。
+Unit 4(SVOO)	"The boss bought me dinner last night. " "Really? He's usually so stingy!"	「昨日の晩は、上司にごちそうになったんだ」「本当？いつもはあんなにケチなのに！」
+Unit 4(SVOO)	"Desk work gives me a stiff neck. " "That's true. Why don't you go (and) get a massage?"	「デスクワークは肩が凝るよ」「本当ね。マッサージしてもらえば？」
+Unit 4(SVOO)	This historical novel gives you some idea of what life was like in the Edo period.	この歴史小説を読めば、江戸時代の生活がどのようなものであったかが、ある程度わかる。
+Unit 4(SVOO)	We often forget how much we owe to our ancestors.	我々は、先人たちにどれほど多くの恩恵を被っているかを、忘れがちだ。
+Unit 4(SVOO)	My house is in the suburbs of London, and it takes about thirty minutes to get there from King's Cross Station.	私の家はロンドンの郊外にあり、キングス・クロス駅からおよそ30分ほどかかります。
+Unit 4(SVOO)	It took me two weeks to create my own website.	自分のホームページを作るのに２週間かかった。
+Unit 4(SVOO)	"A photocopier would save us a lot of time and trouble. " "I know, but they're too expensive."	「コピー機があれば、時間と手間を節約できるよね」「わかってるけど手が出ないね」
+Unit 4(SVOO)	It cost a hundred yen to download the ring tone melody to my cell phone.	その着メロをダウンロードするのに100円かかった。
+Unit 4(SVOO)	The other day, I met a cute guy, so I took his photo with my cell phone and sent it to my ex-boyfriend!	「この間イケメンに会ってね、写メして元彼に送ったの」
+Unit 4(SVOO)	Department stores in Tokyo generally provide excellent service, and the staff are well-trained and courteous.	東京のデパートは概してサービスが素晴らしい。社員はしっかりとした教育を受けてるし、とても礼儀正しい。
+Unit 4(SVOO)	Although the science teacher tried to explain the new theory in simple terms, the students still found it difficult to grasp.	その理科の先生は易しい言葉でその新しい理論を説明しようとしたが、それでも生徒たちは理解するのが難しいと思った。
+Unit 5(SVOC)	Advances in medical science have enabled people to live longer.	医学の進歩により、人々は以前より長生きできるようになった。
+Unit 5(SVOC)	The purpose of this commercial is to let viewers know the dangers of drunk driving.	このコマーシャルの目的は、視聴者に飲酒運転の危険性を伝えることです。
+Unit 5(SVOC)	In some countries, students are allowed to use calculators during tests.	国によっては、学生が試験中に電卓を使ってもいい所もある。
+Unit 5(SVOC)	Humor can be effective in making human relationships run smoothly.	ユーモアは人間関係における一種の潤滑油として働く場合もある。
+Unit 5(SVOC)	Today, as punishment for being late, I was made to weed the playground.	今日、遅刻した罰として、校庭の草むしりをさせられた。
+Unit 5(SVOC)	Paul's baby sister cannot eat by herself yet, so he often helps his mother feed her.	ポールの幼い妹はまだ自分で食事をすることができないので、ポールは母親が妹にご飯を食べさせるのをよく手伝う。
+Unit 5(SVOC)	Taking a walk sometimes helps you clear your mind and focus on what is most important.	散歩をすることで頭が整理され、肝心なことが明確になることがある。
+Unit 5(SVOC)	In Japan, opening a gift in front of the giver is considered rude, while in the U.S. it is perfectly natural.	贈り主の前で贈り物をあけるのは、日本では失礼にあたるが、米国ではごく当たり前の行為だ。
+Unit 5(SVOC)	Dick is regarded as a nuisance by his neighbors, because he rides around at night on his motorbike making a racket.	ディックは、夜中に大きな音を立ててバイクを乗り回しているので、近所の人から厄介者とみなされている。
+Unit 5(SVOC)	The washing machine is making strange noises, so we have to have it repaired.	洗濯機がおかしな音を出しているので、修理に出さないといけない。
+Unit 5(SVOC)	I have to have my train pass renewed because it expires tomorrow.	電車の定期券が明日切れるので、更新しなければならない。
+Unit 5(SVOC)	"Hello. Could I speak to Mr. Stevens? " "I'm afraid he's not here. Shall I have him call back later?"	「もしもし、スティーブンさんおられますか？」「あいにく席を外しております。あとでこちらからおかけいたしましょうか？」
+Unit 5(SVOC)	Henry is often so absorbed in playing basketball that he finds himself practicing until late at night.	ヘンリーはバスケットボールに夢中で、気がつけば夜中まで練習していることも多い。
+Unit 5(SVOC)	I had never heard that Tony could speak French, but yesterday I heard him using it on the phone.	トニーがフランス語を話せるなんて聞いたことがなかったが、昨日、彼が電話でフランス語を使っているのを聞いた。
+Unit 5(SVOC)	On New Year's Eve, after listening to the temple bells ringing, many Japanese people go to shrines to pray for happiness.	多くの日本人は、大晦日には、除夜の鐘を聞いた後、幸福を祈るために、神社にお参りに行きます。
+Unit 5(SVOC)	"What's so special about this zoo? " "You can see the animals moving around at close range."	「どうしてこの動物園がそんなに特別なの？」「動物たちの動きを間近でみることができるんだ」
+Unit 5(SVOC)	"You must not let strangers into the house. " "OK, Mummy. I'll remember that next time."	「知らない人を家に入れてはダメよ」「わかった、ママ。次からは気をつけるよ」
+Unit 5(SVOC)	This morning, I left all the windows open to let some fresh air in.	今朝、新鮮な空気を入れるために、窓をすべて開けておいた。
+Unit 5(SVOC)	I cannot walk five kilometers, let alone jog that far.	私は５キロを歩くのも無理なのに、ましてそんな距離をジョギングなんて無理です。
+Unit 5(SVOC)	I cannot stand being kept waiting for hours at the outpatients' section of a hospital.	病院の外来受付で何時間も待たされるのは耐えられない。
+Unit 6(受動態)	Last month, I broke my right leg during PE class and was taken to the hospital by ambulance.	先月、体育の授業中、右足を骨折し、救急車で病院に運ばれた。
+Unit 6(受動態)	Dan and I played tricks on Mr. Smith and were told off for it.	私とダンでスミス先生にいたずらしたら、叱られた。
+Unit 6(受動態)	When I got a camera as a present at the age of seven, I realized how interesting visual images were.	７歳の時にカメラを買ってもらって、映像の面白さに気づきました。
+Unit 6(受動態)	The other day, my niece was hospitalized and had an operation. Fortunately, it was successful.	先日、姪が入院し手術を受けました。有り難いことに、手術は無事成功しました。
+Unit 6(受動態)	The doctor told me to apply some eye drops every five hours.	医者から、５時間おきに目薬をさすように言われた。
+Unit 6(受動態)	I started yoga because someone told me that I had poor posture.	人から姿勢が悪いと言われたので、ヨガを始めた。
+Unit 6(受動態)	The recent typhoon seriously damaged about two-thirds of the apple crop in this region.	最近の台風で、この地方のリンゴは約３分の２がひどい被害を受けた。
+Unit 6(受動態)	The installation of this air conditioner will be finished in another two hours.	エアコンの取り付けは、あと２時間で終わります。
+Unit 6(受動態)	"You're not supposed to put out the garbage today. " "Oh, I'm sorry. I got my days mixed up."	「今日はゴミを出してはいけないことになっていますよ」「あ、すいません。曜日を間違えてました」
+Unit 6(受動態)	Lisa did not want to be seen crying, so she buried her face in her hands.	リサは、泣いているところを見られたくなかったので、両手で顔を隠した。
+Unit 6(受動態)	This summer, I went to Vietnam, and had a hard time because Japanese was not spoken there.	この夏ベトナムに行った。日本語が通じないので、苦労した。
+Unit 6(受動態)	All summer, I got bitten by mosquitoes, but I did not get stung by a single bee.	夏の間中、蚊に刺されてばかりだったが、ハチに刺されることは一度もなかった。
+Unit 6(受動態)	I felt embarrassed when I could not get through the automatic ticket gate.	自動改札で引っかかって焦った。
+Unit 6(受動態)	Yesterday, I was caught in a shower on my way home and got soaked to the skin.	昨日、家に帰る途中夕立にあい、ずぶ濡れになった。
+Unit 6(受動態)	I usually get my mother to make my lunch, but today I made it myself.	いつもお母さんにお弁当を作ってもらっていますが、今日は自分で作りました。
+Unit 6(受動態)	The writer's books sell very well, and he will be autographing them at a bookstore near the station tomorrow.	その作家の本はとにかくよく売れており、明日は駅前の書店でサイン会が開かれる。
+Unit 7(関係詞)	This morning, the furniture (that) I had ordered from Spain was delivered.	今朝、スペインに注文していた家具が届いた。
+Unit 7(関係詞)	I am reluctant to get rid of books (that) I bought when I was in college.	大学の時に買った本を、なかなか処分する気になれない。
+Unit 7(関係詞)	The DVD about dinosaurs (that) you lent me last Wednesday was absolutely fascinating.	前の水曜日に貸してくれた恐竜のDVDは、とても面白かった。
+Unit 7(関係詞)	It is sometimes difficult to get along with people whose lifestyles are different from yours.	生活様式が異なる人々とうまくやっていくのは難しい時がある。
+Unit 7(関係詞)	The office where I work now is just two stops away on the train.	今の会社はたった２駅の所にある。
+Unit 7(関係詞)	Members of the judo club usually go to restaurants where they can eat a lot of food cheaply.	柔道部員はたいてい、安くて量の多い食堂に行きます。
+Unit 7(関係詞)	Susan's always talking about herself. That's why I don't like her much.	「スーザンはいつも自分の話ばかり。だから、私は彼女のことはあまり好きじゃないの」
+Unit 7(関係詞)	In cities, where you are surrounded by concrete, you seldom experience the subtle changes in the seasons.	コンクリートに囲まれた都会では、季節の微妙な移り変わりを実感するようなことはめったにない。
+Unit 7(関係詞)	In the past, when there were no radios or televisions, people had no choice but to create their own entertainment.	ラジオもテレビもなかった時代、娯楽は自分で創るしかなかった。
+Unit 7(関係詞)	Our daughters, who began piano lessons when they were five years old, have grown up and no longer play music.	５歳からピアノを習い始めた我が家の娘たちも、すっかり大人になり、今や誰も弾かなくなった。
+Unit 7(関係詞)	The Olympic Games, which cost a fortune to host, are losing their original spirit of sportsmanship.	オリンピックは、開催に莫大な財政負担がかかり、本来のスポーツマン精神が失われつつある。
+Unit 7(関係詞)	The Shiretoko Peninsula has recently been designated a World Heritage site, which will protect the area from further development.	知床半島は最近世界遺産に登録された。これで、この地域のさらなる開発にストップがかかるだろう。
+Unit 8(What)	What is important in education is not only what is taught, but what kind of people you meet.	教育において大切なのは、教える内容だけでなく、出会う人の人間性でもあるのだ。
+Unit 8(What)	When you meet someone for the first time, you often have no idea what they are like, and feel uneasy.	初対面の時には、多くの場合、相手が一体どんな人かわからないので、不安を感じるものだ。
+Unit 8(What)	It is difficult for me to turn down what a salesclerk recommends.	店員さんのお勧めを断るのは苦手です。
+Unit 8(What)	I'm going to have a talk with Mr. James about what to do after graduation.	「進路の件でジェームズ先生に相談しに行くんだ」
+Unit 8(What)	"What a surprise to see you here! " "Yeah. It's a small world."	「こんなところで君に会うなんてびっくりだね」「うん。世間て狭いわね」
+Unit 8(What)	"I'll invite Jenny to dinner on the weekend. " "What if she refuses?"	「ジェニーを週末に晩ごはんに誘うんだ」「断られたらどうするのよ」
+Unit 8(What)	People who become familiar with a lot of poems and novels at an early age feel that they know what life is all about.	若くして多くの詩や小説に慣れ親しんでしまうと、人生がわかったような気になるものだ。
+Unit 8(What)	"Answering the questions on this questionnaire is troublesome. " "Just write whatever you like."	「このアンケートに答えるの面倒だね」「適当に答えておけば」
+Unit 8(What)	This town is completely different from what it was ten years ago.	この町は10年前とすっかり変わってしまった。
+Unit 8(What)	"What is the fare from Vancouver to Toronto? " "One way or round trip?"	「バンクーバーからトロントまでの運賃はいくらですか？」「片道ですか？往復ですか？」
+Unit 8(What)	"What do you call this fruit in English? " "Persimmon."	「この果物は英語でどう言うの？」「Persimmon（柿）だよ」
+Unit 8(What)	"What are your hours? " "From 9 a.m. to 5 p.m."	「営業時間は何時から何時までですか？」「９時から５時までです」
+Unit 9(助動詞)	"My sister had a baby girl. " "That's great news. You must be so happy."	「妹に女の子の赤ちゃんが産まれたんだ」「それはよかったね。うれしいでしょう」
+Unit 9(助動詞)	While you are a student, you should acquire a lot of knowledge and become flexible in your thinking.	学生時代に幅広い知識と柔軟な思考力を身につけた方がいいよ。
+Unit 9(助動詞)	Japan is running out of places to dump trash. We must think more seriously about recycling.	近々日本にはゴミを捨てる場所がなくなる。資源の再利用について。さらに真剣に取り組まねばならない。
+Unit 9(助動詞)	Shall we go out for a walk to clear our heads? We may come up with a good idea.	「気分転換に散歩しない？名案が浮かぶかも」
+Unit 9(助動詞)	When I was in elementary school, I would usually play outside with neighborhood kids after school.	私の小学生の頃は、学校から帰ると近所の子どもと外で遊ぶのが普通だった。
+Unit 9(助動詞)	I used to eat ramen at night, but now I do not because I must cut down on my calorie intake.	昔は夜によくラーメンを食べましたが、今では食べません。カロリーの摂取量を減らさなければならないからです。
+Unit 9(助動詞)	Because of the recession, my uncle had to close down his restaurant in Sydney last month.	不況のため、叔父は先月、シドニーのレストランを閉めざるを得なくなった。
+Unit 9(助動詞)	When Jonathan rushed into the classroom with some egg on his mustache, we could not help laughing at him.	ジョナサンが卵をひげにつけて、慌てて教室に入ってきた時、私たちは思わず笑ってしまった。
+Unit 9(助動詞)	I did not think it would rain. I should have checked the weather report before I left home.	雨が降るなんて思ってもみなかった。家を出る前に天気予報をチェックしておけばよかった。
+Unit 9(助動詞)	When the fire broke out, there must have been over five hundred guests in the hotel.	火事が起きた時、そのホテルには500人を超える客がいたに違いない。
+Unit 9(助動詞)	"My lunch box is missing. I may have left it in my locker. " "Well, go (and) check now."	「弁当箱が見あたらない。ロッカーに忘れてきたかもしれない」「じゃあ、今見てきたら」
+Unit 9(助動詞)	A serious student like John cannot have cheated on the exam.	ジョンのような真面目な学生が、その試験でカンニングをしたはずがない。
+Unit 9(助動詞)	I got up late. But my mother drove me to the station, so I was on time for work.	「寝過ごしたけど、母が駅まで送ってくれたので、バイトに遅刻しないで済んだ」
+Unit 9(助動詞)	I speak almost no Italian, but while traveling in Italy this spring, I managed to communicate with gestures.	私はイタリア語がほとんど話せないが、この春、イタリアに旅行した時には、身振り手振りで何とか通じた。
+Unit 9(助動詞)	I did not have enough money on me, so I could not buy the souvenir (that) I wanted.	お金が足りなかったので、買おうと思っていたお土産を買えなかった。
+Unit 9(助動詞)	Could you check how much it'll cost to send this parcel by special delivery?	「この小包を速達で送るには、いくらかかるか調べてもらえませんか？」
+Unit 10(仮定法)	If you lived to be two hundred years old, your life would probably be boring.	もし200歳まで生きられたら、人生は退屈だろう。
+Unit 10(仮定法)	If I were the Prime Minister of Japan, I would first of all try to improve the national economic situation.	もし私が日本の総理大臣になったら、まず最初に日本の経済の立て直しに挑戦します。
+Unit 10(仮定法)	"I'm going to order out for pizza and French fries. " "I wouldn't. You're on a diet."	「ピザとフライドポテトをとろうっと」「やめておいたら。ダイエット中だろ」
+Unit 10(仮定法)	Fred is a math genius. He can solve a problem in a minute that would take me hours.	フレッドは数字の天才だ。僕なら何時間もかかる問題を一瞬で解いてしまう。
+Unit 10(仮定法)	If I had one billion yen, I would buy a luxurious house by the ocean and retire.	もし10億円あれば、海辺に豪邸を買って、引退したい。
+Unit 10(仮定法)	If you were asked to describe how trout tastes, what words would you choose?	鱒の味を説明しろと言われたら、どんな言葉を選びますか？
+Unit 10(仮定法)	If you put your finger on the screen and swipe horizontally, it moves to the next screen.	画面上に指を置き、水平方向に指をすべらせれば、次の画面に移動するよ。
+Unit 10(仮定法)	If I could go back by time machine to the days when I was in junior high school, I would ask Jesse out.	もしタイムマシーンで中学時代に戻れるなら、ジェシーをデートに誘いたいわ。
+Unit 10(仮定法)	Michael wants to quit his job. I'd appreciate it if you could talk him out of the idea.	「マイケルが仕事を辞めたがっているんだ。そうしないように彼を説得してくれると有り難いんだけど」
+Unit 10(仮定法)	Fewer murders would be committed in the U.S. if it were not for guns.	銃がばなければ、米国の殺人件数は減るだろう。
+Unit 10(仮定法)	If there were more 24-hour childcare centers, single mothers would be freer to work.	24時間営業の保育所がもっとあれば、母子家庭の母親でももっと自由に仕事につけるだろう。
+Unit 10(仮定法)	"This aquarium is fun. I could spend hours here. " "Why don't we stay all day?"	「この水族館は楽しい。何時間でもいられる」「じゃ１日中いようよ」
+Unit 10(仮定法)	I'd like a refund on these jeans. The waist is a little too tight.	「このジーンズを返品したいのですが。ウエストがちょっときついので」
+Unit 10(仮定法)	"How would you like me to send the documents by fax or by e-mail? " "I don't mind. You can decide."	「書類はファックスかメールのどちらでお送りいたしましょうか？」「どちらでも構いません。そちらで決めてください」
+Unit 10(仮定法)	If you had followed the doctor's advice and stayed in bed, you would probably have gotten well in a couple of days.	医者の言うことを聞いておとなしく寝ていたら、数日でよくなったのにね。
+Unit 10(仮定法)	If I had not discovered the Beatles and become a singer, I would be just an ordinary office worker.	もしビートルズに出会って歌手になっていなかったら、普通のサラリーマンになっていたと思う。
+Unit 10(仮定法)	"I wish I could afford to buy a Mercedes-Benz. " "Really? A bicycle is enough for me."	「メルセデス・ベンツを買える余裕があればいいのに」「本当？私は自転車で十分よ」
+Unit 10(仮定法)	These days, I sometimes wish I had been born twenty years later.	最近、もう20年遅く生まれていたらなと思うことがある。
+Unit 10(仮定法)	It is about time you resigned your post to make way for younger employees.	そろそろ後進に道を譲る時期ですよ。
+Unit 10(仮定法)	In 3-D movies, you feel as if everything were happening right before your eyes.	３D映画は、あらゆるものがあたかも目の前で繰り広げられているかのように感じられる。
+Unit 11(目的・理由)	My father always walks to work to make up for the lack of exercise in his daily life.	父は日頃の運動不足の解消のため、会社までいつも歩いて通勤しています。
+Unit 11(目的・理由)	Many people stayed up all night waiting in line to buy tickets for Madonna's concert.	マドンナのコンサートのチケットを買うために、多くの人が徹夜で列を作っていた。
+Unit 11(目的・理由)	"Eating a hearty breakfast is good for your health. " "I know, but I have no time."	「朝ごはんをしっかり食べるのは健康にいいんだよ」「わかっているけど時間がないの」
+Unit 11(目的・理由)	Everyone knows that smoking is bad for their health, but many people cannot quit (it).	タバコが身体に悪いというのは常識だが、止められない人が多い。
+Unit 11(目的・理由)	We do without luxuries in order to pay for our son's school expenses.	息子の学費を払うために、贅沢品は我慢しています。
+Unit 11(目的・理由)	I went into the library quietly so that I would not disturb the people there.	図書館にいる人の邪魔にならないように、そっと入った。
+Unit 11(目的・理由)	To avoid heatstroke, make sure you drink plenty of fluids.	熱中症にならないためには、水分をきちんと補給すること。
+Unit 11(目的・理由)	My cell phone's batteries were dead, so I recharged them at the staff room.	携帯のバッテリーが切れたので、職員室で充電した。
+Unit 11(目的・理由)	I can't get a signal on my cell phone because I'm in the basement.	「地下にいるから、携帯が圏外になっている」
+Unit 11(目的・理由)	I have a job and pay taxes, but I do not have the right to vote simply because I am under twenty.	就職して税金も払っているのに、20歳になっていないというだけで、私には投票権がない。
+Unit 11(目的・理由)	Just because young people read less, this does not mean that they are less curious.	若者は以前ほど本を読まなくなったが、だからといって、彼らの好奇心が減少したわけではない。
+Unit 11(目的・理由)	Many children cannot go to school mainly because their families are poor.	貧困が、多くの子どもたちの就学を阻む最大の要因である。
+Unit 11(目的・理由)	People choose to marry late partly because they want to enjoy their freedom as long as possible.	人が晩婚を選択する理由の１つは、自由をできるだけ楽しみたいと思っていることだ。
+Unit 11(目的・理由)	Many people today are overweight probably because they are too busy to exercise.	現代人は、忙しくて運動する時間がないためか、太った人が多い。
+Unit 11(目的・理由)	"Why are you late? " "The plane was delayed for two hours because of frog."	「なぜ遅れたの？」「霧のため、飛行機が２時間遅れていたんです」
+Unit 11(目的・理由)	I had a lot of problems, but thanks to my friends, I managed to overcome them.	私は多くの障害にぶつかったが、友人たちのおかげで何とか乗り越えることができた。
+Unit 11(目的・理由)	We were all moved to learn that Angela had spent her childhood in an orphanage.	私たちは、アンジェラが子ども時代を孤児院で過ごしたのを知って、目頭が熱くなりました。
+Unit 11(目的・理由)	I was disappointed that my favorite skirt had gotten stained.	お気に入りのスカートにしみがついたので、落ち込んだ。
+Unit 11(目的・理由)	We were thrilled that we had made it through to the National High-School Baseball Tournament.	私たちは甲子園の出場が決まってワクワクした。
+Unit 11(目的・理由)	Yesterday, it was so hot that I burned my fingers on the car door.	昨日はとても暑かったので、車のドアで指をやけどした。
+Unit 12(不定詞・分詞・動名詞)	You're not old enough to get married. But I guess if your boyfriend's rich, age doesn't matter.	「あなたはまだ結婚するには若すぎるよ。けど、彼氏がお金持ちなら、年は関係ないよ」
+Unit 12(不定詞・分詞・動名詞)	Soaking in a bath at a hot spring resort is enough to relieve all the stress of everyday life.	温泉につかるだけで、日常のストレスがどこかへ吹き飛ぶ。
+Unit 12(不定詞・分詞・動名詞)	"Sorry, I forgot to record the soccer game. " "Again? You're hopeless!"	「ごめんね。サッカーの試合、録画するの忘れてた」「また？どうしようもない人だなぁ！」
+Unit 12(不定詞・分詞・動名詞)	David hates sitting with his legs crossed. His legs go to sleep.	「デイヴィッドは足を組んで座るのが嫌いだ。足がしびれるからだ」
+Unit 12(不定詞・分詞・動名詞)	I went window shopping with brand-new high heels on today and got blisters on my feet.	今日、おろしたてのヒールをはいてウィンドウショッピングをしたら、足にまめができた。
+Unit 12(不定詞・分詞・動名詞)	Kevin was standing alone in a pub with a glass of beer in one hand and a sports paper in the other.	ケビンは、片手にビール、もう一方の手にスポーツ新聞を持って、パブで１人で立っていた。
+Unit 12(不定詞・分詞・動名詞)	Riding a bicycle at night without the light on is stupid and dangerous.	夜間、ライトをつけないで自転車に乗るのは、愚かで危険なことだ。
+Unit 12(不定詞・分詞・動名詞)	The drunken man sitting next to me on the train fell asleep, resting his head on my shoulder.	電車で隣に座った酔っぱらいの男が眠りこけて、私の肩にもたれかかった。
+Unit 12(不定詞・分詞・動名詞)	"Your ankle is swollen. What happened? " "I sprained it while playing soccer."	「足首が腫れているよ。どうしたの？」「サッカーをしていて捻挫したんだ」
+Unit 12(不定詞・分詞・動名詞)	Suddenly excited, Tim took the teddy bear out of the box.	ティムは突然興奮して、クマのぬいぐるみを箱から取り出した。
+Unit 12(不定詞・分詞・動名詞)	Considering the issue of street crime, it seems better to study in Australia than in the U.S.	治安の問題を考慮すれば、留学は米国よりオーストラリアの方がいいように思われる。
+Unit 12(不定詞・分詞・動名詞)	"Memorizing lists of English words is incredibly tiring! " "I agree. I've had enough."	「英単語の一覧を丸暗記するのは、信じられないくらい疲れる」「本当そうだよね。やってられないよ」
+Unit 12(不定詞・分詞・動名詞)	"In my free time, I like going to DIY stores. " "Do you know about the new one near the office?"	「趣味はホームセンター巡りです」「会社の近くに一軒新しいのができたの知ってる？」
+Unit 12(不定詞・分詞・動名詞)	"Studying Korean is very popular nowadays. " "Yes, even my mother's into it."	「近頃は韓国語ブームね」「うん、うちの母でさえはまってるよ」
+Unit 12(不定詞・分詞・動名詞)	I had spent three hours watching videos on YouTube before realizing it.	ユーチューブで動画を見ていて、気がつけば、３時間も経っていた。
+Unit 12(不定詞・分詞・動名詞)	Mother Teresa, as a nun, devoted all her life to giving a helping hand to poor people.	マザー・テレサは修道女として、貧しい人々の救済に一生を捧げた。
+Unit 12(不定詞・分詞・動名詞)	This article on the Self-Defense Forces is well worth reading.	自衛隊に関するこの記事は、読んでみる価値が十分にある。
+Unit 12(不定詞・分詞・動名詞)	The heavy traffic prevented me from arriving on time, so my boss got upset.	渋滞していたため、会社に定時に到着できず、上司に叱られた。
+Unit 12(不定詞・分詞・動名詞)	"I have an upset stomach and feel like throwing up. " "Don't move. I'll get you a bucket."	「胃の調子が悪くて吐き気がする」「動かないで。バケツを持って来てあげるから」
+Unit 12(不定詞・分詞・動名詞)	My grandmother, who is eighty, goes swimming at a local pool every day.	80歳になる祖母は、毎日近所のプールに泳ぎに出かける。
+Unit 12(不定詞・分詞・動名詞)	In Japan, crowds of people go cherry-blossom viewing around the beginning of April.	４月のはじめ頃、日本ではたくさんの人がお花見に出かける。
+Unit 12(不定詞・分詞・動名詞)	"Would you mind gift-wrapping this for me, please? " "Certainly not, ma'am."	「これをギフト用に包んでもらいたいのですが」「かしこまりました」
+Unit 12(不定詞・分詞・動名詞)	I don't mind your coming home late as long as you're sober.	「素面なら、遅く帰ってきても構わないよ」
+Unit 12(不定詞・分詞・動名詞)	People have difficulty putting in contact lenses at first.	「最初はコンタクトがなかなかうまく入らないものだよ」
+Unit 12(不定詞・分詞・動名詞)	I have low blood pressure, but I have no difficulty getting up early.	私は低血圧だけど、朝は大丈夫だ。
+Unit 12(不定詞・分詞・動名詞)	For financial reasons, I had to give up the idea of studying abroad.	経済的な理由で、留学をあきらめねばならなかった。
+Unit 12(不定詞・分詞・動名詞)	Peter has lived in Kyoto for months, but he is still not used to the public transportation.	ピーターは京都に数ヶ月住んでいるが、まだ交通機関に慣れていない。
+Unit 12(不定詞・分詞・動名詞)	In order to stay healthy, Karen walks up the stairs, instead of taking the elevator.	カレンは健康のために、エレベーターではなく階段を使っている。
+Unit 13(Itの表現)	"Will it be a sunny day tomorrow? " "Yes. Why don't you take Elizabeth to a beer garden?"	「明日は晴れるかな？」「大丈夫。エリザベスをビアガーデンに連れて行ったら？」
+Unit 13(Itの表現)	It is dangerous to think that your values are the only correct ones.	自分の価値観だけが絶対だと思うのは危険です。
+Unit 13(Itの表現)	It would be dangerous for this country to depend on only one energy source.	この国がたった１つのエネルギー源に頼るのは危険だ。
+Unit 13(Itの表現)	It is shameful to change your opinions simply to please other people.	他人に迎合するためだけに自分の信念を曲げるのは、あさましいことだ。
+Unit 13(Itの表現)	It is really nice to have time to sunbathe at the pool.	プールでゆっくり日光浴をするのは、本当にいいね。
+Unit 13(Itの表現)	Is it possible for you to postpone our business trip to Hong Kong until next week?	「香港出張を来週に延期することは、可能でしょうか？」
+Unit 13(Itの表現)	It will be beneficial for everyone if the standard retirement age is raised to seventy.	定年を70歳に引き上げることは、誰にとっても有益であろう。
+Unit 13(Itの表現)	It was wise of you to make a reservation at this restaurant so far in advance.	「君がこのレストランの予約をずいぶん前にしておいたのは、懸命だった」
+Unit 13(Itの表現)	In order to develop your ability to concentrate and think clearly, it is best to get enough sleep.	集中力と明晰な思考力を養うには、よく眠るのが一番だ。
+Unit 13(Itの表現)	In Japan, it is good manners to pour other people's drinks at parties.	日本の宴会では、人に飲み物をつぐのが礼儀です。
+Unit 13(Itの表現)	It is no exaggeration to say that Naomi is addicted to shopping.	ナオミは買い物中毒と言ってもおかしくはない。
+Unit 13(Itの表現)	It's better to take this wool cardigan to the dry cleaner than to wash it by hand.	「このウールのカーディガンは、手洗いするよりクリーニング店に持って行った方がよい」
+Unit 13(Itの表現)	"It's a good day to wash the car. Emma, go (and) get the hose! " "OK, Good idea."	「今日は洗車日和だ。エマ、ホースを持ってこいよ。」「わかった。いい考えね」
+Unit 13(Itの表現)	It's your turn to do the dishes today. I did them yesterday.	「今日は君が皿洗いをする番だ。僕は昨日したからね」
+Unit 13(Itの表現)	It is not unusual in the West to show guests around your whole house.	客を招いたら、家のすべての部屋を案内してまわるのが欧米の通例である。
+Unit 13(Itの表現)	Mr. Woodham is the boss. It's up to him to organize the meeting.	「ウッドハムがボスだ。その会を開くかどうかを決めるのは彼だ」
+Unit 13(Itの表現)	It is a waste of taxpayers' money to tear up decent sidewalks and then repave them.	まともな歩道を取り払い、それを舗装し直すのは、税金の無駄遣いである。
+Unit 13(Itの表現)	It is the responsibility of parents to teach their children how to behave properly in public.	公共の場所でのきちんとした行動の仕方を子供に教えるのは、親の義務だ。
+Unit 13(Itの表現)	It does not matter how much Kenny drinks, because he never gets hungover.	ケニーはいくら飲んでも平気だ。二日酔いしない。
+Unit 13(Itの表現)	It is a pity that many people still mistakenly believe that they have only to speak English to be internationally-minded.	英語を話せさえすれば国際人になれると勘違いしている人がまだ大勢いるのは、残念だ。
+Unit 13(Itの表現)	My father is very stubborn, so it is no use trying to persuade him to change his mind.	父はとても頑固だから、考えを変えるように説得するのは無駄だと思う。
+Unit 13(Itの表現)	It was for the first time in ten years that we saw our town covered with snow before Christmas.	私たちの街がクリスマス前に雪景色となったのは、10年ぶりのことだった。
+Unit 13(Itの表現)	It is not until you go abroad that you realize how wonderful traditional Japanese culture is.	外国に行って初めて、日本の伝統文化の良さに気づく。
+Unit 13(Itの表現)	It will be many years before anyone can accurately predict a hurricane's behavior.	ハリケーンの動きを正確に予測できるようになるには、まだ多くの年月を要するだろう。
+Unit 14(接続詞と前置詞)	"Let's take a break before we continue the negotiations. " "That sounds like a good idea."	「休憩してから交渉を続けましょう」「いい考えですね」
+Unit 14(接続詞と前置詞)	You'll see the office as soon as you get off the elevator on the fifth floor.	「事務所は、５階でエレベーターを降りてすぐです」
+Unit 14(接続詞と前置詞)	Once you take the pot off the stove, let it stand for five minutes.	いったん鍋をコンロから下ろしたら、そのまま５分間蒸らしてください。
+Unit 14(接続詞と前置詞)	Every time I travel to China, I regret that I did not study Chinese harder.	中国に旅行をするたびに、もっと熱心に中国語の勉強をしておけばよかったと後悔する。
+Unit 14(接続詞と前置詞)	"Take an umbrella with you in case it rains. " "OK, I will."	「雨が降るといけないから、傘を持って行きなさい」「わかった」
+Unit 14(接続詞と前置詞)	In my opinion, telling a lie is acceptable when the truth may hurt someone's feelings.	本当のことを言ったら傷つく人がいるかもしれない場合には、ウソをつくことは許されるというのが、私の意見です。
+Unit 14(接続詞と前置詞)	Your room's messy. Tidy it up by the time your father gets back.	「部屋がぐちゃぐちゃね。お父さんが帰ってくるまでには片付けておきなさいよ」
+Unit 14(接続詞と前置詞)	We have plenty of time until the dolphin show begins. What shall we do?	「イルカショーまでずいぶん時間があるよ。どうする？」
+Unit 14(接続詞と前置詞)	Now that the National Center Exams are all over, I feel really relieved.	やっとセンター試験が終わって、せいせいした気分だ。
+Unit 14(接続詞と前置詞)	"What do you think of Darrell's plans? " "As far as I'm concerned, they're absolutely impractical."	「ダレルの計画はどう思う？」「僕から言わせてもらうと絶対実現できないよ」
+Unit 14(接続詞と前置詞)	Whenever New Year comes around, I promise myself that I will keep a diary.	信念が巡ってくるたびに、日記をつけようと心に誓う。
+Unit 14(接続詞と前置詞)	Many people buy bottled water, even though plastic bottles are not environmentally friendly.	ペットボトルは環境にやさしくないのに、ペットボトルの水を買う人が多い。
+Unit 14(接続詞と前置詞)	Young people can look beautiful even when they are not wearing makeup.	若い人は、たとえ化粧をしなくても、きれいなものですよ。
+Unit 14(接続詞と前置詞)	These days, even if you have no cash on you, you can eat out or do some shopping.	最近では、たとえ現金を持っていなくても、食事や買い物をすることができる。
+Unit 14(接続詞と前置詞)	However difficult a math problem seems to be, you can find a clue to the solution by trial and error.	数学の問題というのはどんなに難しく思えても、試行錯誤によって解法の手がかりが見つかるものだ。
+Unit 14(接続詞と前置詞)	Do not despair however many times you fail. It is a mistake to lose hope after your first try.	どれほど失敗を重ねようとも、決して絶望してはならない。一度挑戦して失敗したぐらいで希望を捨てるのは、間違っている。
+Unit 14(接続詞と前置詞)	It is true that this hybrid car gets good mileage, but it is a bit expensive.	このハイブリッド車は確かに燃費は良いが、ちょっと値段が高い。
+Unit 14(接続詞と前置詞)	I am not sure if things produced by advanced technology have made our daily lives much more comfortable.	先端技術によって生まれた製品が、私たちの日常生活を以前よりずいぶんと快適にしたかどうかは、私にはよくわからない。
+Unit 14(接続詞と前置詞)	I take an advanced French course, but it's very hard to keep up with it, so I'm wondering if I should change courses.	「フランス語の上級コースをとっているのですが、授業についていくのが大変なので、コースを変えようかと思っています」
+Unit 14(接続詞と前置詞)	As the proverb goes, you cannot have your cake and eat it too.	「菓子は食えばなくなる」という諺がある。
+Unit 14(接続詞と前置詞)	I have to hand in a paper for Professor Milton's chemistry class by Thursday morning.	木曜日の朝までにミルトン先生の化学の授業のレポートを提出しないといけない。
+Unit 14(接続詞と前置詞)	Most people are capable of expressing their ideas by the age of five or six.	たいていの人間は５〜６歳になる頃までには、自分の考えを表現できる能力をもつようになる。
+Unit 14(接続詞と前置詞)	Except during rush hour, you can usually find a seat on the train.	通勤時間帯でなければ、たいてい電車で席を見つけることはできます。
+Unit 14(接続詞と前置詞)	Besides going to a swimming school twice a week, Sheila works out at a gym on Wednesdays.	シーラは週２回スイミングスクールに通う以外にも、水曜日にはジムでトレーニングをしている。
+Unit 15(同格)	Last year, WHO issued a warning that bird flu would trigger an international pandemic.	昨年、世界保健機関は鳥インフルエンザが世界的に流行するだろうと警告を発した。
+Unit 15(同格)	Since you have no evidence that Jill stole your textbooks, you must not suspect her.	ジルが君の教科書を盗んだという証拠はないのだから、彼女を疑ってはならない。
+Unit 15(同格)	Some Japanese people may have had the experience of panicking when suddenly asked for directions in English.	日本人の中には、いきなり英語で道を尋ねられ、かたまってしまったという経験がある人もいることだろう。
+Unit 15(同格)	The tendency for young people to be indifferent to politics is nothing new.	若者が政治に無関心という傾向は、今に始まったことではない。
+Unit 15(同格)	Richard is under the illusion that all women are drawn to him. I certainly am not!	リチャードはすべての女性が自分に惹かれていると錯覚している。私は絶対そんなことはない。
+Unit 15(同格)	The memory of being stuck in an elevator as a child is so intense that I will never forget it.	子どものころにエレベーターの中に閉じ込められた記憶は、一生消えることがないほど強烈だ。
+Unit 15(同格)	I do not agree with the idea that men and women should have equal roles in the home and in the workplace.	男性と女性が家庭や職場で等しい役割を担うべきだという考えに、私は賛成しかねる。
+Unit 15(同格)	I read a newspaper article this morning that said that Japan should abolish the death penalty.	今朝、日本は死刑を廃止するべきだという記事を新聞で読んだ。
+Unit 15(同格)	"Why did Simon quit his job? " "He wants to realize his dream of opening his own cafe."	「なぜサイモンは仕事を辞めたの？」「喫茶店を開業するという自分の夢を実現させたいんだよ」
+Unit 15(同格)	Americans have a custom of singing Carols on Christmas Eve.	アメリカ人は、クリスマスイブにクリスマスキャロルを歌う習慣がある。
+Unit 15(同格)	There is a common belief in the West that June brides will lead happy lives.	欧米には、ジューンブライドは幸せになれるという通説がある。
+Unit 15(同格)	"Is the rumor true that Dylan's rock band is breaking up? " "Yes. He fell out with the drummer."	「ディランのロックバンドが解散するって噂、本当なの？」「うん。ディランがドラマーともめたんだ」
+Unit 16(比較)	That Australian beef over there is cheaper than this domestic beef.	「あそこにあるオージービーフの方が、この国産より安い」
+Unit 16(比較)	The population of Holland is much larger than that of Greece, but its area is less than half as large.	オランダの人口はギリシャよりずっと多いが、面積は半分もない。
+Unit 16(比較)	Electronic dictionaries are far lighter than paper ones. Moreover, they are more useful because they contain a number of dictionaries.	電子辞書は紙の辞書に比べればずいぶんと軽い。おまけに辞書が何冊も入っているから便利だ。
+Unit 16(比較)	Doing physical activity is more enjoyable than staring at a PC screen.	パソコンの画面を眺めているより、身体を動かしたほうが楽しい。
+Unit 16(比較)	In that country, prices have risen by 20,000% over the past three years, and their bank notes are as good as wastepaper.	その国では、物価が過去３年間で２万パーセント上昇し、紙幣は紙くず同然となっている。
+Unit 16(比較)	My sons all have big appetites, so my family spends about three times as much money on food as the average family.	息子たちがみんな食べ盛りなので、我が家の食費は普通の家の約３倍だ。
+Unit 16(比較)	My understanding is that there are more than ten times as many lawyers in the U.S. as there are in Japan.	米国には日本の10倍以上の弁護士がいるらしい。
+Unit 16(比較)	More languages are spoken in New York than in any other city in the world.	世界中でニューヨークほど、さまざまな言語が話されている都市はない。
+Unit 16(比較)	Computers today are ten times as powerful as they were twenty years ago, but they cost only on-fifth as much.	今のコンピュータは20年前に比べて10倍の性能をもったが、値段は５分の１にすぎない。
+Unit 16(比較)	The current low birthrate is not a serious problem for Japan, because its ideal population would be about half what it is now.	現在の低い出生率は日本にとって深刻な問題ではない。なぜなら、日本の理想的な人口は今の約半数だからだ。
+Unit 16(比較)	This town is a lot greener than it was thirty years ago.	30年前に比べると、この町はずいぶんと緑が豊かになった。
+Unit 16(比較)	Young Japanese people today engage in volunteer activities more actively than they used to.	最近の日本の若者たちは、以前より積極的にボランティア活動に参加している。
+Unit 16(比較)	We should value traditions more than we do now, and pay more attention to the importance of our heritage.	私たちはもっと伝統を重んじ、受け継いだものの重要性にもっと目を向けるべきだ。
+Unit 16(比較)	Jennifer's father looks much younger than he really is. No wonder you mistook him for her brother.	ジェニファーのお父さんは見た目にはずっと若い。あなたが彼女のお兄さんと間違えたのも無理はない。
+Unit 16(比較)	You learn more when you have difficulties than when everything is going well.	順風満帆の時より、うまくいかない時の方が学ぶことが多い。
+Unit 16(比較)	When I stay over at a friend's house, I take more snack food than we can eat.	友達の家でお泊りの時、食べ切れないほどのお菓子を持って行ってしまう。
+Unit 16(比較)	Mary likes to study more than anyone else in her class, but she says that she is happiest on Sundays, when there is no school.	メアリーはクラスの誰よりも勉強が好きだが、学校がない日曜日が一番幸せだと言う。
+Unit 16(比較)	I woke up earlier than usual this morning, so I felt sleepy all day.	今日はいつもより早く目が覚めたので、１日中眠かった。
+Unit 16(比較)	India is the world's largest rice producer, after China.	インドは中国に次いで世界第２位の米の生産国だ。
+Unit 16(比較)	"Of all desserts, I like custard pudding best. " "Girls always have room for dessert."	「デザートの中ではプリンが一番好き」「女の子にとってデザートは別腹だよね」
+Unit 16(比較)	No other book in the world is read more widely than the Bible.	聖書ほど世界中で広く読まれている本はない。
+Unit 16(比較)	I prefer playing sports outside to watching TV at home.	家でテレビを見ているよりも、外でスポーツをする方が好きだ。
+Unit 16(比較)	The more you laugh, the healthier you are, both physically and mentally.	人は笑えば笑うほど、心身ともに健康になるものだ。
+Unit 16(比較)	The older you get, the more difficult it becomes to learn a foreign language, but the more pleasure you get from studying it.	年をとると外国語を学ぶのが難しくなるが、そこから得られる楽しみは大きい。
+Unit 16(比較)	As my working hours get longer, I find myself with less time for hobbies.	仕事をする時間が長くするにつれ、趣味に費やす時間が少なくなっている。
+Unit 16(比較)	The more you know about the real state of affairs in your company, the less eager you are to work.	会社の内情を知れば知るほど、やる気がうせるものだ。
+Unit 16(比較)	We watched our team lose the soccer match. The cold rain left us feeling even more miserable.	私たちのサッカーチームが試合に負けたのを見た。冷たい雨がいっそう惨めな気分にさせた。
+Unit 16(比較)	"I'm going to sell this handbag on an online auction. " "That's an old design, so you'll get twenty thousand yen at most."	「このバッグ、ネットオークションを出すんだ」「型が古いからせいぜい２万円ね」
+Unit 16(比較)	"This pot cost thirty thousand yen! Can you believe that? " "Incredible!"	「この鍋、３万円もしたのよ！」うそ！」
+Unit 16(比較)	The physics exam (that) I took yesterday was more difficult than I had expected.	昨日受けた物理の試験は、思っていたよりも難しかった。
+Unit 17(語順)	Congratulations on winning the award! Could you tell me why you decided to become a film director?	「受賞おめでとうございます。どうして映画監督になりたいと思ったのか、聞かせていただけますか？」
+Unit 17(語順)	"Could you tell me where the city hall is? " "Go straight for two blocks, and you'll see it on your right."	「すいませんが、市役所はどこですか？」「まっすぐに２筋目まで行ったら右側にあります」
+Unit 17(語順)	"If you like, I'll pick you up at the bus stop. " "Thank you. I'll be there at two."	「よかったら、バス停まで車で迎えに行くよ」「ありがとう。２時にね」
+Unit 17(語順)	"Could you see Judith off if it's not inconvenient for you? " "Sure. No problem."	「不都合でなければ、ジュディスを見送ってもらえませんか？」「はい。いいですよ」
+Unit 17(語順)	I often talk with Eric, but I don't think I've ever heard him talk about his job.	「僕はエリックとよく話をするが、エリックが自分の仕事の話をするのを聞いたことがないと思う」
+Unit 17(語順)	"What do you think will be invented fifty years from now? " "A TV that would allow you to taste something on the screen."	「今から50年でどのような発明品がでてくると思いますか？」「画面に出てくるものの味見ができるテレビかな」
+Unit 17(語順)	You should do what you believe is right, whether other people approve or not.	他人が認めようと認めまいと、自分が正しいと信じていることをやりなさい。
+Unit 17(語順)	"Do you happen to know where the restroom is? " "Sure. It's that way."	「トイレはどこかご存知ですか？」「ええ。あちらです」
+Unit 17(語順)	Many Japanese business people, when they have a long vacation, are at a loss how to spend their time.	日本のビジネスパーソンの中には、長期休暇をもらってもどう過ごしたらよいか途方に暮れるという人が多い。
+Unit 17(語順)	I was born and brought up in the middle of Kobe. Right across from my house was a Western-style house with a brick wall around it.	私は神戸の真ん中で生まれ育った。家の真向かいには、煉瓦塀の洋館があった。
+Unit 17(語順)	Today frozen foods are fifty percent off, so the food section of the supermarket is crowded.	「今日は冷凍食品が半額なので、スーパーの食品売り場は客でごったがえしている」
+Unit 18(数字)	Our principal is in her fifties, but she looks young for her age.	校長先生は50代だが、歳の割には若く見える。
+Unit 18(数字)	Japan made great economic progress in the 1970s and started to export cars all over the world.	日本は1970年代に大きな経済成長を遂げ、世界中に車を輸出し始めた。
+Unit 18(数字)	At this rate, the earth's average temperature will have increased by 3℃ or more by the end of the 21st century.	この調子でいくと、21世紀の終わりまでには、地球の平均気温が３度以上上昇するだろう。
+Unit 18(数字)	It is estimated that in several years the world's population will reach eight billion.	世界の人口は数年後には80億に達すると推定されている。
+Unit 18(数字)	Years later, Joey's success as a salesperson was recognized and he was transferred to headquarters.	数年後、ジョーイはセールスマンとしての実績が認められ、本社勤務となった。
+Unit 18(数字)	"How long before the flight should I get to the airport? " "Please be there at least two hours before take-off."	「空港へは出発のどれくらい前に行けばいいですか？」「出発の２時間前にはおいでください」
+Unit 18(数字)	Some foreigners can use Japanese in daily life a year after they arrive in Japan.	日本に来て１年で日本語で日常会話ができるようになる外国人もいる。
+Unit 18(数字)	"I hear you stayed three days in Shanghai. " "Yes, and shopping was so cheap thanks to the strong yen."	「２泊３日で上海に行ったらしいね」「円高のおかげで買い物が安くて済んだわ」
+Unit 18(数字)	"My temperature is 38.5℃, and I have a runny nose. " "Don't give it to me!"	「熱が38度５分もあって、鼻水も出る」「風邪をうつさないでよ」
+Unit 18(数字)	Every morning, I swim ten laps of butterfly in the university's heated pool.	私は毎朝、大学の温水プールで、バタフライで10往復するのが日課です。
+Unit 18(数字)	The earthquake that hit Chile last month was the severest in forty years and five thousand people were killed or injured.	先月チリを襲った地震は40年ぶりの大地震で、死傷者は５千名に達した。
+Unit 18(数字)	When you stare at something from a distance of less than six meters, your eye muscles become tense.	６メートル以内にあるものを見つめると、目の筋肉が緊張する。
+Unit 18(数字)	Although over two-thirds of the earth's surface is covered with water, many countries around the world are suffering from water shortages.	地球の表面の３分の２以上が水で覆われているのに、世界の多くの国が水不足で困っている。
+Unit 18(数字)	At this university, the ratio of male to female students in the Faculty of Engineering is about five to one.	この大学では、工学部の男女比はおおよそ５対１です。
+Unit 18(数字)	From which platform does the 3:00 p.m. express train for Seattle depart?	「午後３時発のシアトル行きの急行列車は、どのホームから出ますか？」
+Unit 19(否定)	Tomatoes were originally grown not in Italy but in South America.	トマトの原産地は、イタリアではなく南米である。
+Unit 19(否定)	Put up this notice with double-sided tape, not with thumbtacks.	この掲示は画びょうではなく、両面テープで貼ってください。
+Unit 19(否定)	In male-oriented societies, women have few opportunities to fulfill their potential in the academic world.	男性中心社会では、女性が学問の世界で活躍する機会は少ない。
+Unit 19(否定)	Tobacco companies can no longer advertise their products on television in this country.	この国では、タバコ会社が、テレビで自社の製品を宣伝することはできなくなった。
+Unit 19(否定)	"Restaurants featured in guidebooks aren't always nice. " "You're right! Some of them are disappointing."	「本に出ているレストランがおいしいとは限らないわね」「まったく。中には期待はずれなものもあるよね」
+Unit 19(否定)	This house faces south and is ideal in terms of size, but it's a little too expensive for us.	「この一戸建ての家は南向きで、広さの点でも理想的なんだけど、ちょっと予算オーバーだ」
+Unit 19(否定)	Not all Japanese people know much about their own history and culture.	日本人だからといって、日本の歴史や文化をよく知っているとは限らない。
+Unit 19(否定)	Far from receiving applause, the band was booed and had garbage thrown at them.	そのバンドは、拍手をもらうどころか、ブーイングを浴びて、ゴミが投げつけられた。
+Unit 19(否定)	"I can hardly wait to watch the next episode of this drama. " "Me, neither."	「このドラマの続きが見たくてしかたがない」「私も」
+Unit 19(否定)	The last thing (that) I want to hear said about me that I am a coward.	臆病者とだけは言われたくない。
+Unit 19(否定)	"Isn't your wife coming today? " "No, but she says hello to everyone."	「今日は奥様はご一緒ではないのですか？」「はい、皆さんによろしくとのことでした」
+Unit 19(否定)	I rented two DVDs from the rental video shop last week, but I have not watched either of them yet.	先週レンタルショップでDVDを２本借りたが、まだどちらも見ていない。
+Unit 20(感情表現)	"Could you do me a favor? " "Sure, I'd be happy to. What is it?"	「お願いがあるのですが」「はい、喜んで。何でしょうか？」
+Unit 20(感情表現)	"I'm afraid of flying, so I always take the train. " "The only thing (that) I'm afraid of is my wife."	「私は飛行機が怖いので、いつも電車を使います」「僕が怖いのは家内だけです」
+Unit 20(感情表現)	Rob hesitated to hold Sally's hand at first, but on the Ferris wheel he could not resist it.	ロブは、最初サリーの手を握るのをためらったが、観覧車ではその気持ちを抑えられなかった。
+Unit 20(感情表現)	Ruth has a pessimistic view of life and always worries about trivial matters.	ルースは、人生に対して暗い見方しかせず、ちょっとしたことでいつもくよくよしている。
+Unit 20(感情表現)	"I've been looking forward to this day for a long time. " "I know exactly how you feel."	「ずっとこの日を楽しみにしてきたんだ」「あなたの気持ち、よくわかるわ」
+Unit 20(感情表現)	Most Americans do not care how you pronounce English as long as they can understand what you are trying to say.	意味が通じる限り、相手の発音のよしあしを気にしないアメリカ人がほとんどだ。
+Unit 20(感情表現)	Some people do not feel guilty about littering tourist areas.	観光地で平気でゴミを捨てる人がいる。
+Unit 20(感情表現)	Alex is self-centered and inconsiderate of others, so he was rejected by his classmates.	アレックスは自己中心的で他人への思いやりがないので、クラスのみんなからのけ者にされている。
+Unit 20(感情表現)	Sharon was so ashamed of her poor test results that she did not speak for a week.	シャロンは、テストのひどい結果がとても恥ずかしくて、１週間誰とも話さなかった。
+Unit 20(感情表現)	Our company president is very nervous about the protection of personal information.	うちの会社の社長は、個人情報の保護に神経を尖らせている。
+Unit 20(感情表現)	I apologized to Ann for being late, but she did not forgive me.	私はアンに遅刻したことを謝ったが、許してくれなかった。
+Unit 20(感情表現)	"Don't cut in! " "Sorry, I didn't mean to."	「割り込まないでよ！」「ごめん。そのつもりはなかったんだ」
+Unit 21(重要表現)	Comics play an important role in Japanese popular culture.	漫画は日本大衆文化において大切な役割を果たしています。
+Unit 21(重要表現)	I think that British people are similar to Japanese in the way (that) they react to happiness or sadness.	イギリス人が喜びや悲しみに反応する様は、日本人に似ていると思う。
+Unit 21(重要表現)	English and Japanese are completely different in pronunciation and grammar.	英語と日本語では、発音も文法も全く違います。
+Unit 21(重要表現)	Browsing through the entries in an encyclopedia is just like wandering among the shelves in a vast library.	百科事典の項目をあれこれ眺めるのは、ちょうど広大な図書館の書架の中をうろつくことに似ている。
+Unit 21(重要表現)	Ways of greeting people vary from country to country. In Japan, bowing is more common than shaking hands.	あいさつの仕方は国によりさまざまだが、日本では、握手よりお辞儀の方が普通だ。
+Unit 21(重要表現)	The quality of a newspaper depends on the intellectual level of its readers.	新聞の質は読者の知的水準で決まる。
+Unit 21(重要表現)	Unlike in the U.S., in Japan, people drive on the left-hand side of the road.	日本では、米国と違って、車は左側通行です。
+Unit 21(重要表現)	People who share the same hobby often have lively conversations.	同じ趣味を持つもの同士では、会話が弾むものだ。
+Unit 21(重要表現)	"There's already a long line of people. " "We were right to arrive early."	「もう人がこんなにたくさん並んでるよ」「早く来て正解だったね」
+Unit 21(重要表現)	Some societies tend to place importance on your academic background.	一部の社会は学歴重視の傾向にある。
+Unit 21(重要表現)	When I passed Tom and Jean on the street, I pretended not to notice them.	トムとジーンに街ですれ違ったときに、私は気づかぬふりをした。
+Unit 21(重要表現)	The art of calligraphy dates back to ancient China.	書道の起源は古代中国に遡る。
+Unit 21(重要表現)	The jewelry shop was robbed last night, and diamond rings worth one hundred million yen were stolen.	昨夜その宝石店が襲われ、１億円相当のダイヤの指輪が盗まれた。
+Unit 21(重要表現)	Equality of the sexes is taken for granted, but only a few women are active in the political arena.	男女の平等は当然のこととされているが、政治の場で活躍している女性はほんの一握りである。
+Unit 21(重要表現)	Under the seniority system, taking maternity leave puts women at a disadvantage in terms of promotion.	年功序列の社会では、女性が育児休暇をとることは昇進の面で著しく不利である。
+Unit 21(重要表現)	Japan used to be famous for its low crime rate, but there is more and more crime these days.	かつて日本は犯罪率の低さで有名だったが、今では犯罪が増加している。
+Unit 21(重要表現)	Most Japanese believe that their blood type has something to do with their personality.	大半の日本人が、血液型は性格と何らかの関係があると信じている。
+Unit 21(重要表現)	A nocturne by Chopin always reminds me of my stay in Warsaw.	私は、ショパンのノクターンを聴くといつもワルシャワにいた時のことを思い出します。
+Unit 21(重要表現)	My husband and I share household chores. I am in charge of vacuuming.	我が家は家事の分担をしていて、掃除機をかけるのは私の担当です。
+Unit 21(重要表現)	The books you read in your youth have a great influence on your view of life.	青春時代に読む本が、その後の人生観に大きな影響を与える。
+Unit 21(重要表現)	At first I had the impression that Betty was difficult to talk with, but later I realized that this was not the case.	最初、ベティは話しかけにくい人かなと思ったが、実はそうではないとわかった。
+Unit 21(重要表現)	People say that practice makes perfect. This is particularly true of learning foreign languages.	「習うより慣れよ」と言われている。これは特に語学の学習に当てはまる。
+    </script>
+</body>
+</html>
