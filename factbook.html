@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>英文暗誦フラッシュカード (FACTBOOK LE 1)</title>
+    <title>英文暗誦フラッシュカード (Factbook LE1)</title>
     <style>
         /* デザイン設定 */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -61,6 +61,11 @@
 
         .card-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fdfdfd; border: 2px solid #eee; border-radius: 12px; padding: 30px; margin-bottom: 20px; position: relative; min-height: 250px; }
         .unit-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; background: #eee; padding: 2px 8px; border-radius: 4px; }
+        
+        /* ▼▼▼ 追加: カウンターのスタイル ▼▼▼ */
+        .card-counter { position: absolute; top: 10px; right: 10px; font-size: 14px; color: #888; font-weight: bold; }
+        /* ▲▲▲ 追加ここまで ▲▲▲ */
+
         .question-text { font-size: 22px; color: #333; text-align: center; margin-bottom: 20px; }
         .question-subtext { font-size: 18px; color: #666; text-align: center; padding-top: 15px; border-top: 1px solid #eee; width: 100%; }
         
@@ -92,7 +97,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>🃏 英文暗誦 PRO 〜 FACTBOOK LE 1</h1>
+        <h1>🃏 英文暗誦 PRO 〜 Factbook LE1</h1>
         
         <div class="setup-section" id="setupSection">
             <select id="unitSelect"></select>
@@ -119,6 +124,7 @@
             
             <div class="card-area">
                 <div class="unit-badge" id="questionUnit"></div>
+                <div class="card-counter" id="cardCounter"></div>
                 <div class="question-text" id="questionText"></div>
                 <div class="question-subtext" id="questionSubtext"></div>
                 
@@ -224,6 +230,11 @@
             window.speechSynthesis.cancel(); // ページめくり時に音声を停止
             const item = currentList[idx];
             document.getElementById('questionUnit').textContent = item.unit;
+            
+            // ▼▼▼ 追加: カウンター表示の更新 ▼▼▼
+            document.getElementById('cardCounter').textContent = (idx + 1) + " / " + currentList.length;
+            // ▲▲▲ 追加ここまで ▲▲▲
+
             document.getElementById('questionSubtext').textContent = item.jpn;
             document.getElementById('correctText').textContent = item.eng;
             document.getElementById('answerDisplay').style.display = 'none';
