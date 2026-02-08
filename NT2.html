@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文暗誦フラッシュカード (New Treasure 2)</title>
+    <style>
+        /* デザイン設定 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 750px;
+            width: 100%;
+            padding: 40px;
+            min-height: 550px;
+            display: flex;
+            flex-direction: column;
+        }
+        h1 { text-align: center; color: #333; margin-bottom: 10px; font-size: 28px; }
+        
+        .setup-section { background: #f5f5f5; padding: 30px; border-radius: 8px; margin-bottom: 30px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        select { padding: 12px; width: 100%; max-width: 300px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; margin-bottom: 15px; }
+        .order-options { margin-bottom: 20px; font-size: 14px; }
+        .order-options label { margin: 0 10px; cursor: pointer; }
+
+        button { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn-primary { background: #667eea; color: white; width: 100%; max-width: 250px; font-size: 16px; margin: 0 auto; }
+        
+        .practice-section { display: none; flex: 1; flex-direction: column; }
+        .practice-section.active { display: flex; }
+        .progress-bar { background: #e0e0e0; height: 6px; border-radius: 3px; margin-bottom: 10px; overflow: hidden; }
+        .progress-fill { background: #667eea; height: 100%; width: 0%; transition: width 0.3s; }
+        
+        /* モードセレクタ */
+        .mode-selector { display: flex; gap: 4px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap; }
+        .mode-btn { padding: 6px 10px; border: 1px solid #ddd; background: white; font-size: 10px; cursor: pointer; }
+        .mode-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        /* 再生ボタン専用スタイル */
+        .btn-audio-top {
+            padding: 6px 10px; 
+            border: 1px solid #4a5568; 
+            background: #4a5568; 
+            color: white; 
+            font-size: 10px; 
+            cursor: pointer;
+            display: inline-flex; align-items: center; gap: 3px;
+        }
+        .btn-audio-top:hover { background: #2d3748; }
+
+        .card-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fdfdfd; border: 2px solid #eee; border-radius: 12px; padding: 30px; margin-bottom: 20px; position: relative; min-height: 250px; }
+        .unit-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; background: #eee; padding: 2px 8px; border-radius: 4px; }
+        .question-text { font-size: 22px; color: #333; text-align: center; margin-bottom: 20px; }
+        .question-subtext { font-size: 18px; color: #666; text-align: center; padding-top: 15px; border-top: 1px solid #eee; width: 100%; }
+        
+        .input-ui, .voice-ui { width: 100%; display: none; margin-top: 15px; }
+        .input-ui.active, .voice-ui.active { display: block; }
+        #answerInput { width: 100%; padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; outline: none; }
+        
+        .voice-ui { text-align: center; }
+        .mic-btn { background: #f8d7da; color: #721c24; border-radius: 50%; width: 50px; height: 50px; font-size: 20px; display: inline-flex; align-items: center; justify-content: center; }
+        .mic-btn.listening { background: #dc3545; color: white; animation: pulse 1.5s infinite; }
+        
+        .diff-display { margin-top: 15px; font-size: 18px; line-height: 1.6; text-align: center; display: none; background: #fff; padding: 10px; border-radius: 8px; width: 100%; }
+        .word-correct { color: #28a745; font-weight: bold; margin: 0 3px; }
+        .word-wrong { color: #dc3545; text-decoration: line-through; margin: 0 3px; font-size: 0.85em; opacity: 0.6; }
+        .word-missing { color: #dc3545; font-weight: bold; border-bottom: 2px solid #dc3545; margin: 0 3px; }
+        .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #333; color: #fff; font-size: 14px; margin-bottom: 10px; }
+
+        .answer-display { width: 100%; text-align: center; margin-top: 15px; display: none; background: #f0f4ff; padding: 15px; border-radius: 8px; }
+        
+        .evaluation-buttons { display: none; gap: 10px; width: 100%; margin-top: 15px; flex-wrap: wrap; }
+        .btn-status { flex: 1; padding: 15px; border-radius: 8px; font-size: 14px; cursor: pointer; border: none; font-weight: bold; min-width: 100px; }
+        .btn-remembered { background: #d4edda; color: #155724; }
+        .btn-so-so { background: #fff3cd; color: #856404; }
+        .btn-forgotten { background: #f8d7da; color: #721c24; }
+        
+        .btn-back { width: 100%; background: #e2e8f0; color: #4a5568; margin-top: 10px; padding: 10px; font-size: 13px; border-radius: 8px; border:none; cursor:pointer; }
+        .stats { font-size: 12px; color: #666; text-align: center; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🃏 英文暗誦 PRO 〜 New Treasure 2</h1>
+        
+        <div class="setup-section" id="setupSection">
+            <select id="unitSelect"></select>
+            <div class="order-options">
+                <label><input type="radio" name="playOrder" value="sequence" checked> 番号順</label>
+                <label><input type="radio" name="playOrder" value="random"> ランダム</label>
+            </div>
+            <button class="btn-primary" onclick="startPractice()">学習開始</button>
+        </div>
+        
+        <div class="practice-section" id="practiceSection">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            
+            <div class="mode-selector">
+                <button class="btn-audio-top" onclick="playAudio()">🔊 音声再生 (0)</button>
+                
+                <button class="mode-btn active" onclick="setMode(1)">1: 穴30%</button>
+                <button class="mode-btn" onclick="setMode(2)">2: 穴50%</button>
+                <button class="mode-btn" onclick="setMode(3)">3: 頭文字</button>
+                <button class="mode-btn" onclick="setMode(4)">4: 和訳</button>
+                <button class="mode-btn" onclick="setMode(5)">5: タイピング</button>
+                <button class="mode-btn" onclick="setMode(6)">6: 音声</button>
+            </div>
+            
+            <div class="card-area">
+                <div class="unit-badge" id="questionUnit"></div>
+                <div class="question-text" id="questionText"></div>
+                <div class="question-subtext" id="questionSubtext"></div>
+                
+                <div class="input-ui" id="inputUI">
+                    <input type="text" id="answerInput" placeholder="英文を入力..." autocomplete="off">
+                </div>
+                <div class="voice-ui" id="voiceUI">
+                    <button id="micBtn" class="mic-btn" onclick="toggleListening()">🎤</button>
+                    <div id="voiceStatus" style="font-size:11px; color:#888; margin-top:5px;">クリックして話す</div>
+                </div>
+
+                <div id="diffResult" class="diff-display"></div>
+
+                <div class="answer-display" id="answerDisplay">
+                    <div id="correctText" style="font-weight:bold; font-size:20px;"></div>
+                </div>
+            </div>
+
+            <div style="text-align:center; min-height: 120px;">
+                <button class="btn-primary" id="showAnswerBtn" onclick="showAnswer()">答えを確認 (Enter)</button>
+                
+                <div class="evaluation-buttons" id="evalButtons">
+                    <button class="btn-status btn-remembered" onclick="record(1)">😄 覚えた (J)</button>
+                    <button class="btn-status btn-so-so" onclick="record(2)">😐 まあまあ (K)</button>
+                    <button class="btn-status btn-forgotten" onclick="record(3)">😰 忘れた (L)</button>
+                    <button class="btn-back" id="backBtn" onclick="goBack()">⬅ 前のカードに戻る</button>
+                </div>
+            </div>
+            
+            <div class="stats" id="statsText"></div>
+            <button onclick="location.reload()" style="background:none; border:none; color:#999; cursor:pointer; font-size:11px; margin-top:10px; width:100%;">Unit選択へ戻る</button>
+        </div>
+    </div>
+
+    <script>
+        let allItems = [];
+        let currentList = [];
+        let retryList = [];
+        let idx = 0;
+        let mode = 1;
+        let stats = { 1:0, 2:0, 3:0 };
+        let history = [];
+
+        // 音声認識
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = SpeechRecognition ? new SpeechRecognition() : null;
+        if(recognition) {
+            recognition.lang = 'en-US';
+            recognition.onstart = () => { document.getElementById('micBtn').classList.add('listening'); };
+            recognition.onresult = (e) => { compareHighPrecision(e.results[0][0].transcript); showAnswer(); };
+            recognition.onend = () => { document.getElementById('micBtn').classList.remove('listening'); };
+        }
+
+        // テキスト読み上げ (Text-to-Speech)
+        function playAudio() {
+            if (!window.speechSynthesis) {
+                alert("お使いのブラウザは音声読み上げに対応していません。");
+                return;
+            }
+            const item = currentList[idx];
+            // 読み上げ設定
+            const uttr = new SpeechSynthesisUtterance(item.eng);
+            uttr.lang = 'en-US'; 
+            uttr.rate = 1.0; // 速度
+            
+            // 既存の読み上げをキャンセルして再生
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(uttr);
+        }
+
+        function initData() {
+            const raw = document.getElementById('studyData').textContent.trim();
+            raw.split('\n').forEach(line => {
+                const cols = line.split('\t');
+                if(cols.length >= 3) allItems.push({ unit: cols[0], eng: cols[1].trim(), jpn: cols[2].trim() });
+            });
+            const unitSet = [...new Set(allItems.map(i => i.unit))];
+            unitSet.forEach(u => {
+                const op = document.createElement('option');
+                op.value = u; op.textContent = u; document.getElementById('unitSelect').appendChild(op);
+            });
+        }
+
+        function startPractice() {
+            const sel = document.getElementById('unitSelect').value;
+            currentList = allItems.filter(i => i.unit === sel);
+            if(document.querySelector('input[name="playOrder"]:checked').value === 'random') {
+                currentList.sort(() => Math.random() - 0.5);
+            }
+            idx = 0; stats = {1:0, 2:0, 3:0}; history = []; retryList = [];
+            document.getElementById('setupSection').style.display = 'none';
+            document.getElementById('practiceSection').classList.add('active');
+            show();
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.querySelectorAll('.mode-btn').forEach((b, i) => b.classList.toggle('active', i+1 === m));
+            show();
+        }
+
+        function show() {
+            window.speechSynthesis.cancel(); // ページめくり時に音声を停止
+            const item = currentList[idx];
+            document.getElementById('questionUnit').textContent = item.unit;
+            document.getElementById('questionSubtext').textContent = item.jpn;
+            document.getElementById('correctText').textContent = item.eng;
+            document.getElementById('answerDisplay').style.display = 'none';
+            document.getElementById('showAnswerBtn').style.display = 'block';
+            document.getElementById('evalButtons').style.display = 'none';
+            document.getElementById('diffResult').style.display = 'none';
+            document.getElementById('answerInput').value = '';
+            document.getElementById('inputUI').classList.toggle('active', mode === 5);
+            document.getElementById('voiceUI').classList.toggle('active', mode === 6);
+            document.getElementById('backBtn').style.visibility = (idx === 0) ? 'hidden' : 'visible';
+
+            let display = "";
+            if (mode === 5) display = "タイピングしてください";
+            else if (mode === 6) display = "話してください";
+            else if (mode === 4) display = "???";
+            else {
+                const words = item.eng.split(/(\s+)/);
+                const rate = (mode === 1) ? 0.3 : (mode === 2) ? 0.5 : 0;
+                display = words.map(w => {
+                    if(!/\w/.test(w)) return w;
+                    if(mode === 3) return w[0] + ".".repeat(w.length-1);
+                    return Math.random() < rate ? "____" : w;
+                }).join("");
+            }
+            document.getElementById('questionText').textContent = display;
+            if(mode === 5) setTimeout(() => document.getElementById('answerInput').focus(), 50);
+            updateUI();
+        }
+
+        function showAnswer() {
+            if (mode === 5) compareHighPrecision(document.getElementById('answerInput').value);
+            document.getElementById('answerDisplay').style.display = 'block';
+            document.getElementById('showAnswerBtn').style.display = 'none';
+            document.getElementById('evalButtons').style.display = 'flex';
+        }
+
+        /**
+         * 高精度判定ロジック
+         * 引用符(" ' “ ” ‘ ’)を無視する設定に修正
+         */
+        function compareHighPrecision(userInput) {
+            const correctVal = currentList[idx].eng;
+            
+            // クリーニング関数: 記号を消して小文字にする
+            // ダブルクォーテーション、スマートクォート、アポストロフィー(’ ' ‘)を削除対象に追加
+            const clean = (t) => t.toLowerCase().replace(/[.,!?"'“”‘’]/g, "").trim();
+            
+            const userWords = userInput.split(/\s+/).filter(w => w !== "").map(clean);
+            const correctWords = correctVal.split(/\s+/).filter(w => w !== "").map(clean);
+            const originalCorrectWords = correctVal.split(/\s+/).filter(w => w !== "");
+
+            // DPテーブルの作成
+            const n = userWords.length;
+            const m = correctWords.length;
+            const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+
+            for (let i = 0; i <= n; i++) dp[i][0] = i;
+            for (let j = 0; j <= m; j++) dp[0][j] = j;
+
+            for (let i = 1; i <= n; i++) {
+                for (let j = 1; j <= m; j++) {
+                    if (userWords[i - 1] === correctWords[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1];
+                    } else {
+                        dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
+                    }
+                }
+            }
+
+            // バックトレース
+            let i = n, j = m;
+            const resultHtmlParts = [];
+            let correctCount = 0;
+
+            while (i > 0 || j > 0) {
+                if (i > 0 && j > 0 && userWords[i - 1] === correctWords[j - 1]) {
+                    resultHtmlParts.unshift(`<span class="word-correct">${originalCorrectWords[j - 1]}</span>`);
+                    correctCount++;
+                    i--; j--;
+                } else if (j > 0 && (i === 0 || dp[i][j - 1] <= dp[i - 1][j] && dp[i][j - 1] <= dp[i - 1][j - 1])) {
+                    resultHtmlParts.unshift(`<span class="word-missing">${originalCorrectWords[j - 1]}</span>`);
+                    j--;
+                } else {
+                    resultHtmlParts.unshift(`<span class="word-wrong">${userWords[i - 1]}</span>`);
+                    i--;
+                }
+            }
+
+            const score = correctWords.length > 0 ? Math.round((correctCount / correctWords.length) * 100) : 0;
+            const diffArea = document.getElementById('diffResult');
+            diffArea.innerHTML = `<div class="score-badge">一致率: ${score}%</div><br>${resultHtmlParts.join(" ")}`;
+            diffArea.style.display = 'block';
+        }
+
+        function record(s) {
+            window.speechSynthesis.cancel(); // 次へ行く時に停止
+            if (s !== 1) retryList.push(currentList[idx]);
+            history.push({status: s, item: currentList[idx], wasInRetry: (s !== 1)});
+            stats[s]++;
+            idx++;
+
+            if (idx < currentList.length) show();
+            else {
+                if (retryList.length > 0) {
+                    alert(`覚えていない ${retryList.length} 件を復習します。`);
+                    currentList = [...retryList];
+                    retryList = []; idx = 0; stats = { 1:0, 2:0, 3:0 }; history = [];
+                    show();
+                } else {
+                    alert("全カード完了！");
+                    location.reload();
+                }
+            }
+        }
+
+        function goBack() {
+            window.speechSynthesis.cancel();
+            if (idx > 0) {
+                idx--;
+                const lastAction = history.pop();
+                stats[lastAction.status]--;
+                if (lastAction.wasInRetry) retryList.pop();
+                show();
+            }
+        }
+
+        function toggleListening() { if(recognition) try{ recognition.start(); }catch(e){ recognition.stop(); } }
+
+        function updateUI() {
+            document.getElementById('progressFill').style.width = (idx / currentList.length * 100) + "%";
+            document.getElementById('statsText').textContent = `覚: ${stats[1]} / 普: ${stats[2]} / 忘: ${stats[3]}`;
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') {
+                if(e.key === 'Enter') showAnswer();
+                return;
+            }
+            
+            // ショートカット 0 を追加
+            if(e.key === '0') playAudio();
+
+            const isAnsVisible = document.getElementById('evalButtons').style.display === 'flex';
+            if (e.key === 'Enter' && !isAnsVisible) showAnswer();
+            if (e.key >= '1' && e.key <= '6') setMode(parseInt(e.key));
+            if (isAnsVisible) {
+                if (e.key.toLowerCase() === 'j') record(1);
+                if (e.key.toLowerCase() === 'k') record(2);
+                if (e.key.toLowerCase() === 'l') record(3);
+                if (e.key === 'Backspace' || e.key === 'ArrowLeft') goBack();
+                // 一応Pも残しておきますが、0で動作します
+                if (e.key.toLowerCase() === 'p') playAudio();
+            }
+        });
+
+        window.onload = initData;
+    </script>
+
+    <script id="studyData" type="text/plain">
+Section 1-1	Janet's father is from Spain, and her mother is from America.	ジャネットの父親はスペイン出身で，そして彼女の母親はアメリカ出身です。
+Section 1-1	Janet can sing very well, but she's very shy.	ジャネットはとても上手に歌うことができますが，とても恥ずかしがりやです。
+Section 1-1	Does she speak Spanish or English?	彼女はスペイン語を話しますか，それとも英語を話しますか 。
+Section 1-1	Get up now, and you'll be in time for school.	今起きなさい，そうすれば学校に間に合うでしょう。
+Section 1-1	Be quick, or you'll miss the bus.	早くしなさい，さもなければバスに乗り遅れるでしょう。
+Section 1-2	When my sister was born, I was five years old.	妹が生まれた時，私は５歳でした。
+Section 1-2	I was very happy when I met my new sister.	新しい妹に会った時，私はとてもうれしかったです。
+Section 1-2	While my sister was watching TV, I finished my homework.	妹〔姉〕がテレビを見ている間に，私は宿題を終わらせました。
+Section 1-2	I looked after my brothers while my parents were not at home.	両親が家にいない間，私は弟たちの世話をしました。
+Section 1-2	After I finished the test, I played with my friends in the schoolyard.	テストをやり終えたあと，私は友達と校庭で遊びました。
+Section 1-2	I bought some flowers before I went to Mary's birthday party.	私はメアリーの誕生日パーティーに行く前に花を何本か買いました。
+Section 1-3	Look up at the sky.  How beautiful the rainbow is!	空を見上げてください。虹がなんときれいなんでしょう！
+Section 1-3	I waved to Emi, but she ignored me. How rude she was!	私はエミに手を振りましたが，彼女は私を無視しました。彼女はなんと失礼だったのでしょう！
+Section 1-3	Look at the puppy.  How fast it runs!	その子犬を見てください。なんと速く走るのでしょう！
+Section 1-3	What a difficult test that was!  I must study harder.	あれはなんと難しいテストだったのでしょう！私はもっと一生懸命に勉強しなくてはなりません。
+Section 1-3	What an interesting idea you have!  Explain it to the class.	あなたはなんとおもしろいアイディアをもっているのでしょう！クラスのみんなにそれを説明してください。
+Section 1-3	What unfair rules they are!  I'm going to leave the club.	それらはなんと不公平な規則でしょう！私はクラブをやめるつもりです。
+Section 1-3	My brother always helps me with my homework. 	"私の兄はいつも私の宿題を手伝ってくれます。
+Section 1-3	Section 1-1	Janet's father is from Spain, and her mother is from America.	ジャネットの父親はスペイン出身で，そして彼女の母親はアメリカ出身です。
+Section 1-1	Janet can sing very well, but she's very shy.	ジャネットはとても上手に歌うことができますが，とても恥ずかしがりやです。
+Section 1-1	Does she speak Spanish or English?	彼女はスペイン語を話しますか，それとも英語を話しますか 。
+Section 1-1	Get up now, and you'll be in time for school.	今起きなさい，そうすれば学校に間に合うでしょう。
+Section 1-1	Be quick, or you'll miss the bus.	早くしなさい，さもなければバスに乗り遅れるでしょう。
+Section 1-2	When my sister was born, I was five years old.	妹が生まれた時，私は５歳でした。
+Section 1-2	I was very happy when I met my new sister.	新しい妹に会った時，私はとてもうれしかったです。
+Section 1-2	While my sister was watching TV, I finished my homework.	妹〔姉〕がテレビを見ている間に，私は宿題を終わらせました。
+Section 1-2	I looked after my brothers while my parents were not at home.	両親が家にいない間，私は弟たちの世話をしました。
+Section 1-2	After I finished the test, I played with my friends in the schoolyard.	テストをやり終えたあと，私は友達と校庭で遊びました。
+Section 1-2	I bought some flowers before I went to Mary's birthday party.	私はメアリーの誕生日パーティーに行く前に花を何本か買いました。
+Section 1-3	Look up at the sky.  How beautiful the rainbow is!	空を見上げてください。虹がなんときれいなんでしょう！
+Section 1-3	I waved to Emi, but she ignored me. How rude she was!	私はエミに手を振りましたが，彼女は私を無視しました。彼女はなんと失礼だったのでしょう！
+Section 1-3	Look at the puppy.  How fast it runs!	その子犬を見てください。なんと速く走るのでしょう！
+Section 1-3	What a difficult test that was!  I must study harder.	あれはなんと難しいテストだったのでしょう！私はもっと一生懸命に勉強しなくてはなりません。
+Section 1-3	What an interesting idea you have!  Explain it to the class.	あなたはなんとおもしろいアイディアをもっているのでしょう！クラスのみんなにそれを説明してください。
+Section 1-3	What unfair rules they are!  I'm going to leave the club.	それらはなんと不公平な規則でしょう！私はクラブをやめるつもりです。
+Section 1-3	"My brother always helps me with my homework.  " "How kind (he is)! / What a kind brother (he is / you have)!"	"私の兄はいつも私の宿題を手伝ってくれます。 " "（彼は）なんと親切なのでしょう！／（彼は）なんと親切なお兄さんでしょう！／（あなたには）なんと親切なお兄さんがいるのでしょう！"
+Section 2-1	If you mix red and blue, you get purple.	赤と青を混ぜたら，紫になります。
+Section 2-1	You can change the color if you don't like it.	もしその色が気に入らなければ，変えることができます。
+Section 2-1	Let's meet at the bus stop if it rains.	もし雨が降れば，バス停で会いましょう。
+Section 2-1	The bus was late because the roads were busy.	道路が混んでいたのでバスは遅れました。
+Section 2-1	Because the bus didn't come on time, I was late for school.	バスが時刻通りに来なかったので，私は学校に遅刻しました。
+Section 2-1	"Why did you buy a new bike?" "Because I want to go to school by bike."	"あなたはなぜ新しい自転車を買ったのですか。 " "自転車で通学したいからです。"
+Section 2-1	Though it's sunny, it's very cold.	晴れているけれども，とても寒いです。
+Section 2-1	I stopped by a convenience store, although I was in a hurry.	私は急いでいましたが，コンビニエンスストアに立ち寄りました。
+Section 2-2	I know that Nancy is the daughter of the famous actor.	私はナンシーが有名な俳優の娘であることを知っています。
+Section 2-2	I hear that Nancy moved to the US.	ナンシーがアメリカに引っ越したそうです。
+Section 2-2	Do you think that she'll be in a Hollywood movie?	あなたは彼女がハリウッド映画に出演すると思いますか。
+Section 2-2	I hope (that) you will pass the examination.	私はあなたが試験に合格することを願っています。
+Section 2-2	I know (that) your examination went well.	私はあなたの試験がうまくいったことを知っています。
+Section 2-2	I know (that) Mike is listening to Korean pop music.	私はマイクがＫポップを聞いていることを知っています。
+Section 2-2	I knew (that) Mike was listening to Korean pop music.	私はマイクがＫポップを聞いていることを知っていました。
+Section 2-2	I think (that) he will go to the concert.	私は，彼はそのコンサートに行くと思います。
+Section 2-2	I thought (that) he would go to the concert.	私は，彼はそのコンサートに行くと思いました。
+Section 2-3	"Shall we go to the movies together tomorrow? 
+" "Yes, let's. / No, let's not.  Let's watch a movie at home."	"明日一緒に映画に行きませんか。
+" "ええ，行きましょう。／いいえ，やめておきましょう。家で映画を見ましょう。"
+Section 2-3	"Shall I get the movie tickets? 
+" "Yes, please. / No, thank you."	"私が映画のチケットを買いましょうか。
+" "はい，お願いします。／いいえ，結構です。ありがとうございます。"
+Section 2-3	"Will you cook dinner today? 
+" "Sure. / I'm afraid I can't. I'm going out."	今日夕食を作ってくれますか。" "もちろんです。／残念ながら作れません。出かけるんです。
+Section 2-3	"Will you come and have dinner with us? 
+" "Yes, I'd love to. / No, thank you."	"私たちと一緒にいらっしゃって夕食をとりませんか。
+" "はい，喜んで。／いいえ，結構です。ありがとうございます。"
+Section 2-3	You have to be home by six.	あなたは６時までに帰宅しなければなりません。
+Section 2-3	I had to come home early.  I had a lot of homework.	私は早く家に帰らなければなりませんでした。宿題がたくさんありました。
+Section 2-3	David doesn't have to take the exam today.	デイビッドは今日試験を受ける必要はありません。
+Section 2-3	Do you have a fever?  You should see a doctor.	熱がありますか。医者に診てもらうべきです。
+Section 3-1	Time flies.	光陰矢の如し。《ことわざ》
+Section 3-1	My dog sleeps well.	私の犬はよく眠ります。
+Section 3-1	My dog is cute.	私の犬はかわいいです。
+Section 3-1	Mary likes animals.	メアリーは動物が好きです。
+Section 3-1	David became a soccer player.	デイビッドはサッカー選手になりました。
+Section 3-1	David looked tired after the soccer game.	デイビッドはサッカーの試合のあと，疲れているように見えました。
+Section 3-1	The boy became popular all around the world.	その少年は世界中で人気者になりました。
+Section 3-1	In six months he grew tall.	６カ月の間に彼は背が高くなりました。
+Section 3-1	He feels great today.	今日彼は気分がとてもいいです。
+Section 3-2	Maria's father gave her a new smartphone.	マリアのお父さんは彼女に新しいスマートフォンを与えました。
+Section 3-2	Please pass me the smartphone on the table.	テーブルの上にあるスマートフォンを取ってください。
+Section 3-2	Could you show me the photo?	その写真を見せていただけますか。
+Section 3-2	Can you send me the photo by e-mail?	Ｅメールでその写真を送ってくれますか。
+Section 3-2	"Our teacher told us an interesting story yesterday. 
+⇒ Our teacher told an interesting story to us yesterday."	"私たちの先生は昨日私たちに興味深い話を話してくれました。
+⇒私たちの先生は昨日興味深い話を私たちに話してくれました。"
+Section 3-2	"Did you make Janet lunch yesterday?
+⇒ Did you make lunch for Janet yesterday?"	"あなたは昨日ジャネットに昼食を作りましたか。
+⇒あなたは昨日昼食をジャネットに作りましたか。"
+Section 3-2	"My father bought me a new computer.
+⇒ My father bought a new computer for me."	"父は私に新しいコンピューターを買ってくれました。
+⇒父は新しいコンピューターを私に買ってくれました。"
+Section 3-3	My name is Elizabeth.  Please call me Beth.	私の名前はエリザベスです。私をベスと呼んでください。
+Section 3-3	The soccer match made me nervous.  It was an important match.	そのサッカーの試合は私を緊張させました。それは大事な試合でした。
+Section 3-3	Please leave me alone.	私を一人にしておいてください。
+Section 3-3	We must keep our uniforms clean.	私たちはユニフォームをきれいにしておかなくてはなりません。
+Section 3-3	We painted the bench white.	私たちはそのベンチを白く塗りました。
+Section 3-3	Beth found the sports program boring, so she turned off the TV.	ベスはそのスポーツ番組は退屈だと思ったので，テレビを消しました。
+Section 3-3	"What did you name your team? 
+" "We named it “The Reds.”
+"	あなたがたはチームを何と名づけましたか。" "「ザ・レッズ」にしました。
+Section 3-3	Beth made the team chocolate cookies.	ベスはチームのためにチョコレートクッキーを作りました。
+Section 3-3	We made Beth captain of our team.	私たちはベスをチームのキャプテンにしました。
+Section 4-1	Kate likes to draw pictures of animals.	ケイトは動物の絵を描くことが好きです。
+Section 4-1	She began to paint when she was a little girl.	彼女は幼い少女の時に絵を描き始めました。
+Section 4-1	I want to borrow a book about art history.	私は美術史に関する本を借りたいです。
+Section 4-1	"What do you want to be in the future?" "I want to be an artist."	"あなたは将来何になりたいですか。 " "私は芸術家になりたいです。"
+Section 4-1	To get up early is good for your health.	早起きすることはあなたの健康によいです。
+Section 4-1	To talk with my friends makes me happy.	友達と話をすることは私を幸せにします。
+Section 4-1	The important thing is to get enough sleep.	大切なことは睡眠を十分に取ることです。
+Section 4-1	To see is to believe.	見ることは信じることです。（百聞は一見に如かず。《ことわざ》）
+Section 4-2	Robert was in the music room yesterday to practice the piano.	ロバートは昨日ピアノを練習するために音楽室にいました。
+Section 4-2	He practices hard to be a good pianist.	彼はすばらしいピアニストになるために一生懸命に練習します。
+Section 4-2	He is working hard to save money.	彼はお金を貯めるために一生懸命働いています。
+Section 4-2	He is going to visit New York to see a musical.	彼はミュージカルを見るためにニューヨークを訪問するつもりです。
+Section 4-2	"Why do you study English?" "To communicate with people all over the world."	"なぜあなたは英語を勉強するのですか。" "世界中の人々とコミュニケーションをとる〔意思疎通をする〕ためです。"
+Section 4-3	There are many good places to see in Japan.	日本には見るべきよい場所がたくさんあります。
+Section 4-3	I need a guidebook to help me.	私に役に立つガイドブックが必要です。
+Section 4-3	I didn't have enough time to prepare for the trip.	私には旅行の準備をする十分な時間がありません。
+Section 4-3	I want something to eat.	何か食べる物がほしいです。
+Section 4-3	I want something cold to drink.	何か冷たい飲み物がほしいです。
+Section 4-3	I have nothing special to do today.	今日私は特にすることがありません。
+Section 4-3	Mary needs someone to make dinner for her.	メアリーは誰か彼女に夕食を作ってくれる人が必要です。
+Section 5-1	Swimming is fun.	泳ぐことは楽しいです。
+Section 5-1	Getting daily exercise is a good habit.	毎日運動することはよい習慣です。
+Section 5-1	My father's favorite pastime is playing golf.	私の父のお気に入りの娯楽はゴルフをすることです。
+Section 5-1	My mother's job is teaching tennis.	私の母の仕事はテニスを教えることです。
+Section 5-1	Chris enjoys studying math.	クリスは数学を勉強することを楽しんでいます。
+Section 5-1	The teacher finished talking and we started the class.	先生は話すのを終えて私たちは授業を始めました。
+Section 5-1	Patrick stopped writing and put his pen on the desk.	パトリックは書くのをやめて机の上にペンを置きました。
+Section 5-1	After the test, he left the classroom without saying a word.	テストのあと，彼は一言も言わずに教室を立ち去りました。
+Section 5-1	Don't worry about making mistakes.	間違うことを心配してはいけません。
+Section 5-2	We began eating〔to eat〕 lunch at twelve o'clock.	私たちは12時に昼食を食べ始めました。
+Section 5-2	My father enjoyed watching rugby games on TV after lunch.	私の父は昼食のあと，テレビでラグビーの試合の観戦を楽しみました。
+Section 5-2	I want to eat fried noodles today.	今日は焼きそばを食べたいです。
+Section 5-2	Tom doesn't remember meeting Mary in the cafeteria before.	トムは以前カフェテリアでメアリーに会ったことを覚えていません。
+Section 5-2	Please remember to meet me in the cafeteria at noon tomorrow.	明日の正午にカフェテリアで私に会うことを覚えていてください。
+Section 5-2	Mike is good at folding paper cranes.	マイクは折り鶴を折るのが得意です。
+Section 5-2	Alison was tired of staying home every day.	アリソンは毎日家にいるのに飽きていました。
+Section 5-2	I am looking forward to seeing you soon.	近いうちにあなたとお会いするのを楽しみにしています。
+Section 5-2	Would you mind opening the window?	窓を開けていただけませんか。
+Section 6-1	Coffee is drunk all over the world.	コーヒーは世界中で飲まれています。
+Section 6-1	Paper cups are used in many coffee shops.	多くのコーヒーショップで紙コップが使われています。
+Section 6-1	Few paper cups were recycled last year.	昨年，紙コップはほとんどリサイクルされませんでした。
+Section 6-1	These beautiful photos of shooting stars were taken by Chris.	これらの流れ星の美しい写真はクリスによって撮影されました。
+Section 6-1	Pluto was discovered by an American astronomer.	冥王星はアメリカの天文学者によって発見されました。
+Section 6-1	English is not spoken in this area.	この地域では英語は話されていません。
+Section 6-1	"Are Japanese comic books read in New York?  " "Yes, they are. / No, they aren't."	"ニューヨークで日本のマンガ本は読まれていますか。 " "はい，読まれています。／いいえ，読まれていません。"
+Section 6-1	These e-books can be downloaded for free.	これらの電子書籍は無料でダウンロードができます。
+Section 6-2	"What was stolen from Mary's locker?  " "Her purse was."	"メアリーのロッカーから何が盗まれたのですか。 " "ハンドバッグです。"
+Section 6-2	"Where was Mary's purse found?  " "It was found in the restroom."	"メアリーのハンドバッグはどこで発見されたのですか。 " "トイレで発見されました。"
+Section 6-2	"Who was told about the problem first?  " "The shop clerk was."	"誰がその問題について最初に伝えられたのですか。 " "店員です。"
+Section 6-2	The hall was filled with people.	ホールは人々でいっぱいでした。
+Section 6-2	The singer is known to people all over the world.	その歌手は世界中の人々に知られています。
+Section 6-2	We were surprised at the beautiful voice of the singer.	私たちはその歌手の美しい声に驚きました。
+Section 6-2	Mary and I were pleased with the concert.	メアリーと私はそのコンサートに満足しました。
+Section 6-2	We were caught in the rain on our way home.	私たちは家に帰る途中で雨に降られました。
+Section 6-3	"The gold medal was given to Ann by the school.  Ann was given the gold medal by the school."	"金メダルが学校からアンに与えられました。 アンは学校から金メダルを与えられました。"
+Section 6-3	"A Christmas gift was sent to Ted by his uncle.  Ted was sent a Christmas gift by his uncle."	"クリスマスプレゼントがおじさんからテッドに送られました。 テッドはおじさんからクリスマスプレゼントを送られました。"
+Section 6-3	These cookies were made for us by Beth.	これらのクッキーは私たちのためにベスによって作られました。
+Section 6-3	My mother was named Christine by my grandmother.	私の母は私の祖母によってクリスティーンと名づけられました。
+Section 6-3	At school, my mother was called Chris by her friends.	母は学校では友達からクリスと呼ばれていました。
+Section 7-1	I have just eaten my lunch.  So I'm full.	私はちょうど昼食を食べたところです。ですからお腹いっぱいです。
+Section 7-1	My mother has already washed the dishes.	私の母はすでに食器を洗いました。
+Section 7-1	My brother has lost his smartphone.	私の兄〔弟〕はスマートフォンをなくしました。
+Section 7-1	I have not written my essay yet.	私はまだエッセイ〔レポート〕を書いていません。
+Section 7-1	My brother has not found his smartphone yet.	私の兄〔弟〕はまだスマートフォンを見つけていません。
+Section 7-1	"Have you found your smartphone yet?  " "Yes, I have. / No, I haven't.〔No, not yet.〕"	"あなたはもうスマートフォンを見つけましたか。 " "はい，見つけました。／いいえ，見つけていません。〔いいえ，まだです。〕"
+Section 7-2	I have seen that movie before.	私は以前その映画を見たことがあります。
+Section 7-2	My parents have visited France twice.	私の両親は２度フランスを訪問したことがあります。
+Section 7-2	My dad has talked with that famous dancer.	私のお父さんはその有名なダンサーと話をしたことがあります。
+Section 7-2	My brother has never traveled by plane in his life.	私の兄〔弟〕は生まれてから一度も飛行機に乗って旅行をしたことがありません。
+Section 7-2	"Have you ever traveled on a ship?  " "Yes, I have. / No, I haven't.〔No, never.〕"	"あなたはこれまでに船で旅をしたことがありますか。 " "はい，あります。／いいえ，ありません。〔いいえ，一度もありません。〕"
+Section 7-2	"How often have you been to Hawaii?  " "I have been there four times."	"あなたはハワイに何度〔どのくらいの頻度で〕行ったことがありますか。 " "４回そこへ行きました。"
+Section 7-2	"How many times have you traveled abroad?  " "Only once."	"あなたは何回外国へ旅行したことがありますか。 " "１度だけです。"
+Section 7-3	David has lived in Tokyo for two years.	デイビッドは東京に２年間住んでいます。
+Section 7-3	He and I have known each other since last year.	彼と私は昨年からお互いを知っています。
+Section 7-3	We have been in the same class for six months.	私たちは６カ月間同じクラスです。
+Section 7-3	David hasn't seen his friends in the US for a long time.	デイビッドは長い間アメリカの友人に会っていません。
+Section 7-3	"Have you been busy since you came to Tokyo?  " "Yes, I have. / No, I haven't."	"あなたは東京に来てからずっと忙しいですか。 " "はい，忙しいです。／いいえ，忙しくありません。"
+Section 7-3	"How long have you lived in this city?  " "I have lived here for two years. / For two years."	"あなたはこの市にどのくらいの間住んでいますか。 " "私はここに２年間住んでいます。／２年間です。"
+Section 7-3	"How long has David been famous in Japan?  " "He has been famous since he won the dance competition."	"デイビッドは日本でどのくらいの間有名ですか。 " "彼がダンスコンテストで優勝して以来ずっと有名です。"
+Section 7-4	I have been making a poster for the school festival since this morning.	私は今朝からずっと文化祭のポスターを作っています。
+Section 7-4	Ken has been surfing the Internet for an hour.	ケンは１時間ずっとネットサーフィンをしています。
+Section 7-4	"Have you been studying during the break?  " "Yes, I have. / No, I haven't."	"あなたは休みの間中ずっと勉強していますか。 " "はい，しています。／いいえ，していません。"
+Section 7-4	"How long have you been waiting for your teacher?  " "For about forty minutes."	"あなたはどのくらいの間先生を待っていますか。 " "約40分です。"
+Section 8-1	My family is large.	私の家族は大所帯です。
+Section 8-1	My family are all tall.	私の家族はみんな背が高いです。
+Section 8-1	There were over ten families when I went to the seafood restaurant.	私がそのシーフードレストランに行った時，１０を超える数の家族がいました。
+Section 8-1	I bought two pumpkins, a bottle of milk and two pounds of butter.	私はかぼちゃを２つ，牛乳を１本，そしてバターを２ポンド買いました。
+Section 8-1	My mother gave me some good advice when I made dinner.	私が夕食を作った時に，母はいくつか良い助言をくれました。
+Section 8-1	The secret of my sister's success is a lot of hard work.	私の姉〔妹〕の成功の秘訣は多大な努力です。
+Section 8-1	My brother David left Tokyo for Los Angeles this morning.	私の兄〔弟〕のデイビッドは今朝，ロサンゼルスに向けて東京を発ちました。
+Section 8-2	I lost my umbrella yesterday, so I have to buy one.	私は昨日傘をなくしたので，１本買わなければなりません。
+Section 8-2	"Which is your highlighter?  " "The yellow one."	"どちらがあなたの蛍光ペンですか。 " "黄色の方です。"
+Section 8-2	I bought two shirts and threw away the old ones.	私はシャツを2枚買い，古いものを捨てました。
+Section 8-2	I don't like this sweater. Could you show me another?	私はこのセーターが好きではありません。別のものを1着見せていただけますか。
+Section 8-2	I have two cousins. One is in Osaka and the other is in Fukuoka.	私にはいとこが２人います。１人は大阪に，もう１人は福岡にいます。
+Section 8-2	I have five dogs. One is male and the others are female.	私は犬を５匹飼っています。１匹はオスで残りはメスです。
+Section 8-2	The members of my club celebrated my birthday.  All of them gave me a present.	私のクラブのメンバーが私の誕生日を祝ってくれました。彼ら全員が私にプレゼントをくれました。
+Section 8-2	You should thank each of them for the present.	あなたは彼らそれぞれにプレゼントのお礼を言うべきです。
+Section 8-2	I have a brother. Both of us were born in October.	私には兄〔弟〕が１人います。私たちは２人とも１０月に生まれました。
+Section 8-3	Ted introduced himself to the class.	テッドはクラス（のみんな）に自己紹介をしました。
+Section 8-3	All of the students enjoyed themselves at the welcome party.	生徒全員が歓迎パーティーで楽しみました。
+Section 8-3	I put on a new T-shirt and looked at myself in the mirror.	私は新しいＴシャツを着て，鏡で自分の姿を見ました。
+Section 8-3	Help yourself to anything on the table.	テーブルにあるものはどれでもご自由に召し上がってください。
+Section 8-3	The president himself welcomed the guest at the entrance.	社長自ら入口でお客様を迎えました。
+Section 8-3	The students planned the festival themselves.	生徒たちは自分たちでその祭りを計画しました。
+Section 8-3	We will talk with the doctor himself.	私たちはその医者自身と話をするつもりです。
+Section 8-3	Ted is honesty itself.	テッドは正直そのものです。
+Section 9-1	I need a new phone because I lost my old one.	古い電話を失くしたので，私には新しい電話が必要です。
+Section 9-1	When I took my dog for a walk yesterday, nothing strange happened.	昨日，私が犬を散歩に連れて行った時，何も変わったことは起こりませんでした。
+Section 9-1	Have you ever been to the restaurant on 47th Street?	あなたは47番通りにあるレストランに行ったことがありますか。
+Section 9-1	We are looking for a good restaurant to recommend to my friends.	私たちは友人にすすめられるよいレストランを探しています。
+Section 9-1	James has the ability to cook Japanese and French dishes.	ジェームズには和食とフランス料理を調理する能力〔腕〕があります。
+Section 9-2	We got up early to see the rising sun on New Year's Day.	私たちは元日に日の出を見るために早起きしました。
+Section 9-2	Wash these lettuce leaves in running water, please.	このレタスの葉を流水で洗ってください。
+Section 9-2	Which would you like for breakfast, a boiled egg or scrambled eggs?	朝食にはゆで卵とスクランブルエッグのどちらになさいますか。
+Section 9-2	The police officer found the stolen bike near the station.	その警察官は盗まれた自転車を駅の近くで発見しました。
+Section 9-2	Can you see the two girls there?  The girl sitting on the left is Lisa.	そこにいる２人の女の子が見えますか。左に座っている女の子がリサです。
+Section 9-2	Who was the tall boy running in the schoolyard?	校庭を走っていた背の高い少年は誰でしたか。
+Section 9-2	I love the meals served in our school.	私は学校で出される食事が大好きです。
+Section 9-2	Can everybody see the figure drawn on the blackboard?	皆さん黒板に描かれた図が見えますか。
+Section 10-1	Mike is the boy who lives next door.	マイクは隣に住む男の子です。
+Section 10-1	Do you know the boys who are playing tennis over there?	あそこでテニスをしている男の子たちを知っていますか。
+Section 10-1	The boy who is playing tennis with my brother is Mike.	私の兄〔弟〕とテニスをしている男の子はマイクです。
+Section 10-1	We usually play shogi in the community center which is close to our school.	私たちは普段，学校の近くのコミュニティセンターで将棋をします。
+Section 10-1	A dictionary is a book which explains the meaning of words.	辞書は単語の意味を説明する本です。
+Section 10-1	The dog which is chasing after a ball is Jack.	ボールを追いかけている犬はジャックです。
+Section 10-1	Nancy helped the students that〔who〕 couldn't solve the problem.	ナンシーはその問題が解けない生徒たちを手伝いました。
+Section 10-1	I need more information that 〔which〕 will help me with my report.	私にはレポートの助けとなる情報がもっと必要です。
+Section 10-1	This is the book that 〔which〕 is famous for its beautiful cover.	これは美しい表紙で有名な本です。
+Section 10-2	Is that the boy that〔whom〕 you met at the bookstore?	あれはあなたが書店で会った少年ですか。
+Section 10-2	Tell me about the book which〔that〕 you like the best.	あなたがいちばん好きな本について教えてください。
+Section 10-2	The writer that〔whom〕 I like is only eighteen years old.	私が好きな作家はまだ18歳です。
+Section 10-2	When will the book which〔that〕 I ordered arrive?	私が注文した本はいつ到着しますか。
+Section 10-2	I replied to an e-mail from a boy I met in Rome.	私はローマで会った少年からきたＥメールに返信しました。
+Section 10-2	I've got an e-mail I have to check as soon as possible.	私はできるだけ早く確認しなければならないＥメールを受け取りました。
+Section 10-2	The e-mail you sent me yesterday was really interesting.	あなたが私に昨日送ったＥメールは本当に興味深いものでした。
+Section 10-3	This is the best movie that I have ever seen.	これは私がこれまでに見た中でいちばんよい映画です。
+Section 10-3	This is the first novel that she read in English.	これは彼女が英語で読んだ最初の小説です。
+Section 10-3	All the books that I am reading were bought by my father recently.	私が読んでいる本はすべて，最近父が買いました。
+Section 10-3	The hero in the story can't remember anything that happened to him.	その物語の主人公は自分に起こったことを何も思い出せません。
+Section 10-3	In the book, I like the boy and the dog that are traveling together.	その本では私は一緒に旅をしている少年と犬が好きです。
+Section 10-3	Write about the people and things that interest you.	あなたの興味を引く人々と物事について書きなさい。
+Section 11-1	It is difficult to get up early every morning.	毎朝早起きすることは難しいです。
+Section 11-1	It is important to prepare for an earthquake.	地震に備えることは大切なことです。
+Section 11-1	It will be a lot of fun to ride the roller coaster tomorrow.	明日そのジェットコースターに乗るのはとても楽しいでしょう。
+Section 11-1	It is difficult for me to explain my thoughts in English.	私には英語で自分の考えを説明するのは難しいです。
+Section 11-1	It isn't necessary for you to write the book report now.	あなたは今，読書感想文を書く必要はありません。
+Section 11-1	I want you to clean the living room while I'm out.	私が外出している間にあなたに居間の掃除をしてほしいです。
+Section 11-1	My mother told me to share the cake with my brother.	私の母は私に，弟とケーキを分けるように言いました。
+Section 11-1	I had a toothache.  My mother advised me to see the dentist.	歯が痛かったです。母は私に歯医者に行くように助言しました。
+Section 11-2	Have you decided what to do during the summer vacation?	夏休みの間に何をするか決めましたか。
+Section 11-2	I'm not sure who〔whom〕 to ask about the hotels in London.	私はロンドンのホテルについて誰にたずねるべきかわかりません。
+Section 11-2	We discussed where to go on our vacation.	私たちは休暇でどこに出掛けるか話し合いました。
+Section 11-2	Juliet is wondering when to buy the plane tickets.	ジュリエットは飛行機のチケットをいつ買えばいいか考えています。
+Section 11-2	I don't know how to pronounce this word.	私はこの単語をどう発音するのか知りません。
+Section 11-2	She is thinking about which museums to visit in England.	彼女はイングランドでどの博物館を訪問すべきか考えています。
+Section 11-2	I'm lost. Could you tell me how to get to the hotel?	道に迷っています。そのホテルへの行き方を教えてくださいますか。
+Section 11-2	I asked Mr. Jones what to do in London.	私はジョーンズ先生にロンドンで何をすればよいかたずねました。
+Section 11-3	Betty was too shy to talk to the teacher.	ベティーはあまりに内気だったので先生に話しかけることができませんでした。
+Section 11-3	She was too nervous to ask a question.	彼女はあまりに緊張していたので質問することができませんでした。
+Section 11-3	The teacher spoke too fast for her to understand.	先生はあまりに早口で話したので彼女には理解できませんでした。
+Section 11-3	The homework was too difficult for her to finish in a day.	宿題はあまりに難しかったので彼女は１日で終わらせることができませんでした。
+Section 11-3	This tea is so hot that I can't drink it.	このお茶はとても熱いので私は飲めません。
+Section 11-3	The traffic was so busy that I couldn't be in time for the class.	道路がとても混んでいたので私は授業に間に合いませんでした。
+Section 11-3	My little brother is old enough to walk to our grandparents' house.	私の弟は祖父母の家に歩いて行けるほどの年齢です。
+Section 11-3	I left home early enough to be in time for school.	私は学校に間に合うのに十分早く家を出ました。
+Section 11-3	This bag isn't big enough for me to pack all the clothes I need for travel.	このバッグは私が旅行に必要な衣服を全部詰められるほど大きくありません。
+Section 11-4	My mother makes me eat fresh yogurt every morning.	私の母は毎朝，私に新鮮なヨーグルトを食べさせます。
+Section 11-4	My brother's joke made everyone laugh.	私の兄〔弟〕の冗談はみんなを笑わせました。
+Section 11-4	Our father sometimes lets us stay up late.	私たちの父は時々，私たちが夜遅くまで起きているのを許してくれます。
+Section 11-4	Please let me know when you need any help.	何か助けが必要な時には私に知らせてください。
+Section 11-4	My sister had the server bring another glass of water.	私の姉〔妹〕は給仕に水をもう１杯持ってきてもらいました。
+Section 12-1	I don't know when the party will start.	私はそのパーティーがいつ始まるのか知りません。
+Section 12-1	I cannot imagine what Karen wants for her birthday.	カレンが誕生日に何を欲しがっているか想像がつきません。
+Section 12-1	I have to tell the guests where they should hang their coats.	私はお客様にコートをどこに掛けるべきかを伝えなければなりません。
+Section 12-1	Can you tell me why Sam refused my invitation?	なぜサムが私の誘いを断ったのか教えてくれますか。
+Section 12-1	Do you know who made this birthday cake?	誰がこのバースデーケーキを作ったのか知っていますか。
+Section 12-1	I wonder how many guests will come to the party.	何人のお客様がパーティーにいらっしゃるのだろうか。
+Section 12-1	Takashi didn't know where Nancy was going last night.	タカシはナンシーが昨夜どこに行くところだったのか知りませんでした。
+Section 12-1	He asked me when she would come home.	彼は，いつ彼女が家に帰ってくるかと私にたずねました。
+Section 12-1	I wanted to know how I could contact you while you were out.	あなたの外出中に，どうやったらあなたと連絡を取れるかを知りたかったのです。
+Section 12-2	This is a great restaurant, isn't it?	これはすばらしいレストランですよね。
+Section 12-2	Jim ate a whole pizza, didn't he?	ジムはピザをまるごと１枚食べましたよね。
+Section 12-2	We can share this steak, can't we?	私たちはこのステーキを分け合えますよね。
+Section 12-2	New York isn't the capital city of the US, is it?	ニューヨークはアメリカ合衆国の首都ではありませんよね。
+Section 12-2	Bob doesn't like tomatoes, does he?	ボブはトマトが好きではありませんよね。
+Section 12-2	You have met my cousin, haven't you?	あなたは私のいとこに会ったことがありますよね。
+Section 12-2	Let's go to the beach after lunch, shall we?	昼食後に浜辺に行きませんか。
+Section 12-2	Pass me a cold drink, will you?	冷たい飲み物を取ってもらえますか。
+Section 12-2	There are a lot of people on this beach today, aren't there?	今日はこの浜辺にはたくさんの人がいますよね。
+Section 12-3	If it rains tomorrow, I will go to school by bus.	もし明日雨ならば，バスで学校に行くつもりです。
+Section 12-3	If I had wings, I would fly to school.	もし羽があれば，飛んで学校へ行くのに。
+Section 12-3	If I were not busy, I would help you.	もし私が忙しくなかったら，あなたを手伝うのですが。
+Section 12-3	If John were on the team, we could win the tournament.	もしジョンがチームにいれば，私たちはトーナメントで優勝できるのに。
+Section 12-3	If I had my smartphone with me, I could send text messages to John.	もしスマートフォンが私の手元にあれば，ジョンにメッセージを送ることができるのに。
+Section 12-3	What would you like to do if you were ten years older?	もしあなたが今より10歳年を取っているとしたら何をしたいですか。
+Section 12-3	The musical was amazing!  I wish I could sing like the star!	そのミュージカルはすばらしかったです！そのスターのように歌うことができたらなあ！
+Section 12-3	Mary's brother behaves as if he were a movie star.	メアリーの兄〔弟〕はまるで映画スターのようにふるまいます。" "How kind (he is)! / What a kind brother (he is / you have)!	" "（彼は）なんと親切なのでしょう！／（彼は）なんと親切なお兄さんでしょう！／（あなたには）なんと親切なお兄さんがいるのでしょう！"
+Section 2-1	If you mix red and blue, you get purple.	赤と青を混ぜたら，紫になります。
+Section 2-1	You can change the color if you don't like it.	もしその色が気に入らなければ，変えることができます。
+Section 2-1	Let's meet at the bus stop if it rains.	もし雨が降れば，バス停で会いましょう。
+Section 2-1	The bus was late because the roads were busy.	道路が混んでいたのでバスは遅れました。
+Section 2-1	Because the bus didn't come on time, I was late for school.	バスが時刻通りに来なかったので，私は学校に遅刻しました。
+Section 2-1	"Why did you buy a new bike?  Because I want to go to school by bike."	"あなたはなぜ新しい自転車を買ったのですか。 自転車で通学したいからです。"
+Section 2-1	Though it's sunny, it's very cold.	晴れているけれども，とても寒いです。
+Section 2-1	I stopped by a convenience store, although I was in a hurry.	私は急いでいましたが，コンビニエンスストアに立ち寄りました。
+Section 2-2	I know that Nancy is the daughter of the famous actor.	私はナンシーが有名な俳優の娘であることを知っています。
+Section 2-2	I hear that Nancy moved to the US.	ナンシーがアメリカに引っ越したそうです。
+Section 2-2	Do you think that she'll be in a Hollywood movie?	あなたは彼女がハリウッド映画に出演すると思いますか。
+Section 2-2	I hope (that) you will pass the examination.	私はあなたが試験に合格することを願っています。
+Section 2-2	I know (that) your examination went well.	私はあなたの試験がうまくいったことを知っています。
+Section 2-2	I know (that) Mike is listening to Korean pop music.	私はマイクがＫポップを聞いていることを知っています。
+Section 2-2	I knew (that) Mike was listening to Korean pop music.	私はマイクがＫポップを聞いていることを知っていました。
+Section 2-2	I think (that) he will go to the concert.	私は，彼はそのコンサートに行くと思います。
+Section 2-2	I thought (that) he would go to the concert.	私は，彼はそのコンサートに行くと思いました。
+Section 2-3	"Shall we go to the movies together tomorrow?" "Yes, let's. / No, let's not.  Let's watch a movie at home."	"明日一緒に映画に行きませんか。 " "ええ，行きましょう。／いいえ，やめておきましょう。家で映画を見ましょう。"
+Section 2-3	"Shall I get the movie tickets?" "Yes, please. / No, thank you."	"私が映画のチケットを買いましょうか。 " "はい，お願いします。／いいえ，結構です。ありがとうございます。"
+Section 2-3	"Will you cook dinner today?" "Sure. / I'm afraid I can't. I'm going out."	今日夕食を作ってくれますか。" "もちろんです。／残念ながら作れません。出かけるんです。 Section 2-3	"Will you come and have dinner with us?" "Yes, I'd love to. / No, thank you."	"私たちと一緒にいらっしゃって夕食をとりませんか。 " "はい，喜んで。／いいえ，結構です。ありがとうございます。"
+Section 2-3	You have to be home by six.	あなたは６時までに帰宅しなければなりません。
+Section 2-3	I had to come home early.  I had a lot of homework.	私は早く家に帰らなければなりませんでした。宿題がたくさんありました。
+Section 2-3	David doesn't have to take the exam today.	デイビッドは今日試験を受ける必要はありません。
+Section 2-3	Do you have a fever?  You should see a doctor.	熱がありますか。医者に診てもらうべきです。
+Section 3-1	Time flies.	光陰矢の如し。《ことわざ》
+Section 3-1	My dog sleeps well.	私の犬はよく眠ります。
+Section 3-1	My dog is cute.	私の犬はかわいいです。
+Section 3-1	Mary likes animals.	メアリーは動物が好きです。
+Section 3-1	David became a soccer player.	デイビッドはサッカー選手になりました。
+Section 3-1	David looked tired after the soccer game.	デイビッドはサッカーの試合のあと，疲れているように見えました。
+Section 3-1	The boy became popular all around the world.	その少年は世界中で人気者になりました。
+Section 3-1	In six months he grew tall.	６カ月の間に彼は背が高くなりました。
+Section 3-1	He feels great today.	今日彼は気分がとてもいいです。
+Section 3-2	Maria's father gave her a new smartphone.	マリアのお父さんは彼女に新しいスマートフォンを与えました。
+Section 3-2	Please pass me the smartphone on the table.	テーブルの上にあるスマートフォンを取ってください。
+Section 3-2	Could you show me the photo?	その写真を見せていただけますか。
+Section 3-2	Can you send me the photo by e-mail?	Ｅメールでその写真を送ってくれますか。
+Section 3-2	Our teacher told us an interesting story yesterday. 	私たちの先生は昨日私たちに興味深い話を話してくれました。
+Section 3-2	Did you make lunch for Janet yesterday?"	あなたは昨日昼食をジャネットに作りましたか。"
+Section 3-2	My father bought a new computer for me."	父は新しいコンピューターを私に買ってくれました。"
+Section 3-3	My name is Elizabeth.  Please call me Beth.	私の名前はエリザベスです。私をベスと呼んでください。
+Section 3-3	The soccer match made me nervous.  It was an important match.	そのサッカーの試合は私を緊張させました。それは大事な試合でした。
+Section 3-3	Please leave me alone.	私を一人にしておいてください。
+Section 3-3	We must keep our uniforms clean.	私たちはユニフォームをきれいにしておかなくてはなりません。
+Section 3-3	We painted the bench white.	私たちはそのベンチを白く塗りました。
+Section 3-3	Beth found the sports program boring, so she turned off the TV.	ベスはそのスポーツ番組は退屈だと思ったので，テレビを消しました。
+Section 3-3	"What did you name your team?" "We named it “The Reds.” "	あなたがたはチームを何と名づけましたか。" "「ザ・レッズ」にしました。
+Section 3-3	Beth made the team chocolate cookies.	ベスはチームのためにチョコレートクッキーを作りました。
+Section 3-3	We made Beth captain of our team.	私たちはベスをチームのキャプテンにしました。
+Section 4-1	Kate likes to draw pictures of animals.	ケイトは動物の絵を描くことが好きです。
+Section 4-1	She began to paint when she was a little girl.	彼女は幼い少女の時に絵を描き始めました。
+Section 4-1	I want to borrow a book about art history.	私は美術史に関する本を借りたいです。
+Section 4-1	"What do you want to be in the future?" "I want to be an artist."	"あなたは将来何になりたいですか。 " "私は芸術家になりたいです。"
+Section 4-1	To get up early is good for your health.	早起きすることはあなたの健康によいです。
+Section 4-1	To talk with my friends makes me happy.	友達と話をすることは私を幸せにします。
+Section 4-1	The important thing is to get enough sleep.	大切なことは睡眠を十分に取ることです。
+Section 4-1	To see is to believe.	見ることは信じることです。（百聞は一見に如かず。《ことわざ》）
+Section 4-2	Robert was in the music room yesterday to practice the piano.	ロバートは昨日ピアノを練習するために音楽室にいました。
+Section 4-2	He practices hard to be a good pianist.	彼はすばらしいピアニストになるために一生懸命に練習します。
+Section 4-2	He is working hard to save money.	彼はお金を貯めるために一生懸命働いています。
+Section 4-2	He is going to visit New York to see a musical.	彼はミュージカルを見るためにニューヨークを訪問するつもりです。
+Section 4-2	"Why do you study English?" "To communicate with people all over the world."	"なぜあなたは英語を勉強するのですか。 " "世界中の人々とコミュニケーションをとる〔意思疎通をする〕ためです。"
+Section 4-3	There are many good places to see in Japan.	日本には見るべきよい場所がたくさんあります。
+Section 4-3	I need a guidebook to help me.	私に役に立つガイドブックが必要です。
+Section 4-3	I didn't have enough time to prepare for the trip.	私には旅行の準備をする十分な時間がありません。
+Section 4-3	I want something to eat.	何か食べる物がほしいです。
+Section 4-3	I want something cold to drink.	何か冷たい飲み物がほしいです。
+Section 4-3	I have nothing special to do today.	今日私は特にすることがありません。
+Section 4-3	Mary needs someone to make dinner for her.	メアリーは誰か彼女に夕食を作ってくれる人が必要です。
+Section 5-1	Swimming is fun.	泳ぐことは楽しいです。
+Section 5-1	Getting daily exercise is a good habit.	毎日運動することはよい習慣です。
+Section 5-1	My father's favorite pastime is playing golf.	私の父のお気に入りの娯楽はゴルフをすることです。
+Section 5-1	My mother's job is teaching tennis.	私の母の仕事はテニスを教えることです。
+Section 5-1	Chris enjoys studying math.	クリスは数学を勉強することを楽しんでいます。
+Section 5-1	The teacher finished talking and we started the class.	先生は話すのを終えて私たちは授業を始めました。
+Section 5-1	Patrick stopped writing and put his pen on the desk.	パトリックは書くのをやめて机の上にペンを置きました。
+Section 5-1	After the test, he left the classroom without saying a word.	テストのあと，彼は一言も言わずに教室を立ち去りました。
+Section 5-1	Don't worry about making mistakes.	間違うことを心配してはいけません。
+Section 5-2	We began eating〔to eat〕 lunch at twelve o'clock.	私たちは12時に昼食を食べ始めました。
+Section 5-2	My father enjoyed watching rugby games on TV after lunch.	私の父は昼食のあと，テレビでラグビーの試合の観戦を楽しみました。
+Section 5-2	I want to eat fried noodles today.	今日は焼きそばを食べたいです。
+Section 5-2	Tom doesn't remember meeting Mary in the cafeteria before.	トムは以前カフェテリアでメアリーに会ったことを覚えていません。
+Section 5-2	Please remember to meet me in the cafeteria at noon tomorrow.	明日の正午にカフェテリアで私に会うことを覚えていてください。
+Section 5-2	Mike is good at folding paper cranes.	マイクは折り鶴を折るのが得意です。
+Section 5-2	Alison was tired of staying home every day.	アリソンは毎日家にいるのに飽きていました。
+Section 5-2	I am looking forward to seeing you soon.	近いうちにあなたとお会いするのを楽しみにしています。
+Section 5-2	Would you mind opening the window?	窓を開けていただけませんか。
+Section 6-1	Coffee is drunk all over the world.	コーヒーは世界中で飲まれています。
+Section 6-1	Paper cups are used in many coffee shops.	多くのコーヒーショップで紙コップが使われています。
+Section 6-1	Few paper cups were recycled last year.	昨年，紙コップはほとんどリサイクルされませんでした。
+Section 6-1	These beautiful photos of shooting stars were taken by Chris.	これらの流れ星の美しい写真はクリスによって撮影されました。
+Section 6-1	Pluto was discovered by an American astronomer.	冥王星はアメリカの天文学者によって発見されました。
+Section 6-1	English is not spoken in this area.	この地域では英語は話されていません。
+Section 6-1	"Are Japanese comic books read in New York?" "Yes, they are. / No, they aren't."	"ニューヨークで日本のマンガ本は読まれていますか。 " "はい，読まれています。／いいえ，読まれていません。"
+Section 6-1	These e-books can be downloaded for free.	これらの電子書籍は無料でダウンロードができます。
+Section 6-2	"What was stolen from Mary's locker?" "Her purse was."	"メアリーのロッカーから何が盗まれたのですか。 " "ハンドバッグです。"
+Section 6-2	"Where was Mary's purse found?" "It was found in the restroom."	"メアリーのハンドバッグはどこで発見されたのですか。 " "トイレで発見されました。"
+Section 6-2	"Who was told about the problem first?" "The shop clerk was."	"誰がその問題について最初に伝えられたのですか。 " "店員です。"
+Section 6-2	The hall was filled with people.	ホールは人々でいっぱいでした。
+Section 6-2	The singer is known to people all over the world.	その歌手は世界中の人々に知られています。
+Section 6-2	We were surprised at the beautiful voice of the singer.	私たちはその歌手の美しい声に驚きました。
+Section 6-2	Mary and I were pleased with the concert.	メアリーと私はそのコンサートに満足しました。
+Section 6-2	We were caught in the rain on our way home.	私たちは家に帰る途中で雨に降られました。
+Section 6-3	"The gold medal was given to Ann by the school.	 "金メダルが学校からアンに与えられました。
+Section 6-3	Ann was given the gold medal by the school."	アンは学校から金メダルを与えられました。"
+Section 6-3	"A Christmas gift was sent to Ted by his uncle.	 クリスマスプレゼントがおじさんからテッドに送られました。
+Section 6-3	Ted was sent a Christmas gift by his uncle."	テッドはおじさんからクリスマスプレゼントを送られました。"
+Section 6-3	These cookies were made for us by Beth.	これらのクッキーは私たちのためにベスによって作られました。
+Section 6-3	My mother was named Christine by my grandmother.	私の母は私の祖母によってクリスティーンと名づけられました。
+Section 6-3	At school, my mother was called Chris by her friends.	母は学校では友達からクリスと呼ばれていました。
+Section 7-1	I have just eaten my lunch.  So I'm full.	私はちょうど昼食を食べたところです。ですからお腹いっぱいです。
+Section 7-1	My mother has already washed the dishes.	私の母はすでに食器を洗いました。
+Section 7-1	My brother has lost his smartphone.	私の兄〔弟〕はスマートフォンをなくしました。
+Section 7-1	I have not written my essay yet.	私はまだエッセイ〔レポート〕を書いていません。
+Section 7-1	My brother has not found his smartphone yet.	私の兄〔弟〕はまだスマートフォンを見つけていません。
+Section 7-1	"Have you found your smartphone yet?" "Yes, I have. / No, I haven't.〔No, not yet.〕"	"あなたはもうスマートフォンを見つけましたか。 " "はい，見つけました。／いいえ，見つけていません。〔いいえ，まだです。〕"
+Section 7-2	I have seen that movie before.	私は以前その映画を見たことがあります。
+Section 7-2	My parents have visited France twice.	私の両親は２度フランスを訪問したことがあります。
+Section 7-2	My dad has talked with that famous dancer.	私のお父さんはその有名なダンサーと話をしたことがあります。
+Section 7-2	My brother has never traveled by plane in his life.	私の兄〔弟〕は生まれてから一度も飛行機に乗って旅行をしたことがありません。
+Section 7-2	"Have you ever traveled on a ship?" "Yes, I have. / No, I haven't.〔No, never.〕"	"あなたはこれまでに船で旅をしたことがありますか。 " "はい，あります。／いいえ，ありません。〔いいえ，一度もありません。〕"
+Section 7-2	"How often have you been to Hawaii?" "I have been there four times."	"あなたはハワイに何度〔どのくらいの頻度で〕行ったことがありますか。 " "４回そこへ行きました。"
+Section 7-2	"How many times have you traveled abroad?" "Only once."	"あなたは何回外国へ旅行したことがありますか。 " "１度だけです。"
+Section 7-3	David has lived in Tokyo for two years.	デイビッドは東京に２年間住んでいます。
+Section 7-3	He and I have known each other since last year.	彼と私は昨年からお互いを知っています。
+Section 7-3	We have been in the same class for six months.	私たちは６カ月間同じクラスです。
+Section 7-3	David hasn't seen his friends in the US for a long time.	デイビッドは長い間アメリカの友人に会っていません。
+Section 7-3	"Have you been busy since you came to Tokyo?" "Yes, I have. / No, I haven't."	"あなたは東京に来てからずっと忙しいですか。 " "はい，忙しいです。／いいえ，忙しくありません。"
+Section 7-3	"How long have you lived in this city?" "I have lived here for two years. / For two years."	"あなたはこの市にどのくらいの間住んでいますか。 " "私はここに２年間住んでいます。／２年間です。"
+Section 7-3	"How long has David been famous in Japan?" "He has been famous since he won the dance competition."	"デイビッドは日本でどのくらいの間有名ですか。 " "彼がダンスコンテストで優勝して以来ずっと有名です。"
+Section 7-4	I have been making a poster for the school festival since this morning.	私は今朝からずっと文化祭のポスターを作っています。
+Section 7-4	Ken has been surfing the Internet for an hour.	ケンは１時間ずっとネットサーフィンをしています。
+Section 7-4	"Have you been studying during the break?" "Yes, I have. / No, I haven't."	"あなたは休みの間中ずっと勉強していますか。 " "はい，しています。／いいえ，していません。"
+Section 7-4	"How long have you been waiting for your teacher?" "For about forty minutes."	"あなたはどのくらいの間先生を待っていますか。 " "約40分です。"
+Section 8-1	My family is large.	私の家族は大所帯です。
+Section 8-1	My family are all tall.	私の家族はみんな背が高いです。
+Section 8-1	There were over ten families when I went to the seafood restaurant.	私がそのシーフードレストランに行った時，１０を超える数の家族がいました。
+Section 8-1	I bought two pumpkins, a bottle of milk and two pounds of butter.	私はかぼちゃを２つ，牛乳を１本，そしてバターを２ポンド買いました。
+Section 8-1	My mother gave me some good advice when I made dinner.	私が夕食を作った時に，母はいくつか良い助言をくれました。
+Section 8-1	The secret of my sister's success is a lot of hard work.	私の姉〔妹〕の成功の秘訣は多大な努力です。
+Section 8-1	My brother David left Tokyo for Los Angeles this morning.	私の兄〔弟〕のデイビッドは今朝，ロサンゼルスに向けて東京を発ちました。
+Section 8-2	I lost my umbrella yesterday, so I have to buy one.	私は昨日傘をなくしたので，１本買わなければなりません。
+Section 8-2	"Which is your highlighter?" "The yellow one."	"どちらがあなたの蛍光ペンですか。 " "黄色の方です。"
+Section 8-2	I bought two shirts and threw away the old ones.	私はシャツを2枚買い，古いものを捨てました。
+Section 8-2	I don't like this sweater. Could you show me another?	私はこのセーターが好きではありません。別のものを1着見せていただけますか。
+Section 8-2	I have two cousins. One is in Osaka and the other is in Fukuoka.	私にはいとこが２人います。１人は大阪に，もう１人は福岡にいます。
+Section 8-2	I have five dogs. One is male and the others are female.	私は犬を５匹飼っています。１匹はオスで残りはメスです。
+Section 8-2	The members of my club celebrated my birthday.  All of them gave me a present.	私のクラブのメンバーが私の誕生日を祝ってくれました。彼ら全員が私にプレゼントをくれました。
+Section 8-2	You should thank each of them for the present.	あなたは彼らそれぞれにプレゼントのお礼を言うべきです。
+Section 8-2	I have a brother. Both of us were born in October.	私には兄〔弟〕が１人います。私たちは２人とも１０月に生まれました。
+Section 8-3	Ted introduced himself to the class.	テッドはクラス（のみんな）に自己紹介をしました。
+Section 8-3	All of the students enjoyed themselves at the welcome party.	生徒全員が歓迎パーティーで楽しみました。
+Section 8-3	I put on a new T-shirt and looked at myself in the mirror.	私は新しいＴシャツを着て，鏡で自分の姿を見ました。
+Section 8-3	Help yourself to anything on the table.	テーブルにあるものはどれでもご自由に召し上がってください。
+Section 8-3	The president himself welcomed the guest at the entrance.	社長自ら入口でお客様を迎えました。
+Section 8-3	The students planned the festival themselves.	生徒たちは自分たちでその祭りを計画しました。
+Section 8-3	We will talk with the doctor himself.	私たちはその医者自身と話をするつもりです。
+Section 8-3	Ted is honesty itself.	テッドは正直そのものです。
+Section 9-1	I need a new phone because I lost my old one.	古い電話を失くしたので，私には新しい電話が必要です。
+Section 9-1	When I took my dog for a walk yesterday, nothing strange happened.	昨日，私が犬を散歩に連れて行った時，何も変わったことは起こりませんでした。
+Section 9-1	Have you ever been to the restaurant on 47th Street?	あなたは47番通りにあるレストランに行ったことがありますか。
+Section 9-1	We are looking for a good restaurant to recommend to my friends.	私たちは友人にすすめられるよいレストランを探しています。
+Section 9-1	James has the ability to cook Japanese and French dishes.	ジェームズには和食とフランス料理を調理する能力〔腕〕があります。
+Section 9-2	We got up early to see the rising sun on New Year's Day.	私たちは元日に日の出を見るために早起きしました。
+Section 9-2	Wash these lettuce leaves in running water, please.	このレタスの葉を流水で洗ってください。
+Section 9-2	Which would you like for breakfast, a boiled egg or scrambled eggs?	朝食にはゆで卵とスクランブルエッグのどちらになさいますか。
+Section 9-2	The police officer found the stolen bike near the station.	その警察官は盗まれた自転車を駅の近くで発見しました。
+Section 9-2	Can you see the two girls there?  The girl sitting on the left is Lisa.	そこにいる２人の女の子が見えますか。左に座っている女の子がリサです。
+Section 9-2	Who was the tall boy running in the schoolyard?	校庭を走っていた背の高い少年は誰でしたか。
+Section 9-2	I love the meals served in our school.	私は学校で出される食事が大好きです。
+Section 9-2	Can everybody see the figure drawn on the blackboard?	皆さん黒板に描かれた図が見えますか。
+Section 10-1	Mike is the boy who lives next door.	マイクは隣に住む男の子です。
+Section 10-1	Do you know the boys who are playing tennis over there?	あそこでテニスをしている男の子たちを知っていますか。
+Section 10-1	The boy who is playing tennis with my brother is Mike.	私の兄〔弟〕とテニスをしている男の子はマイクです。
+Section 10-1	We usually play shogi in the community center which is close to our school.	私たちは普段，学校の近くのコミュニティセンターで将棋をします。
+Section 10-1	A dictionary is a book which explains the meaning of words.	辞書は単語の意味を説明する本です。
+Section 10-1	The dog which is chasing after a ball is Jack.	ボールを追いかけている犬はジャックです。
+Section 10-1	Nancy helped the students that〔who〕 couldn't solve the problem.	ナンシーはその問題が解けない生徒たちを手伝いました。
+Section 10-1	I need more information that 〔which〕 will help me with my report.	私にはレポートの助けとなる情報がもっと必要です。
+Section 10-1	This is the book that 〔which〕 is famous for its beautiful cover.	これは美しい表紙で有名な本です。
+Section 10-2	Is that the boy that〔whom〕 you met at the bookstore?	あれはあなたが書店で会った少年ですか。
+Section 10-2	Tell me about the book which〔that〕 you like the best.	あなたがいちばん好きな本について教えてください。
+Section 10-2	The writer that〔whom〕 I like is only eighteen years old.	私が好きな作家はまだ18歳です。
+Section 10-2	When will the book which〔that〕 I ordered arrive?	私が注文した本はいつ到着しますか。
+Section 10-2	I replied to an e-mail from a boy I met in Rome.	私はローマで会った少年からきたＥメールに返信しました。
+Section 10-2	I've got an e-mail I have to check as soon as possible.	私はできるだけ早く確認しなければならないＥメールを受け取りました。
+Section 10-2	The e-mail you sent me yesterday was really interesting.	あなたが私に昨日送ったＥメールは本当に興味深いものでした。
+Section 10-3	This is the best movie that I have ever seen.	これは私がこれまでに見た中でいちばんよい映画です。
+Section 10-3	This is the first novel that she read in English.	これは彼女が英語で読んだ最初の小説です。
+Section 10-3	All the books that I am reading were bought by my father recently.	私が読んでいる本はすべて，最近父が買いました。
+Section 10-3	The hero in the story can't remember anything that happened to him.	その物語の主人公は自分に起こったことを何も思い出せません。
+Section 10-3	In the book, I like the boy and the dog that are traveling together.	その本では私は一緒に旅をしている少年と犬が好きです。
+Section 10-3	Write about the people and things that interest you.	あなたの興味を引く人々と物事について書きなさい。
+Section 11-1	It is difficult to get up early every morning.	毎朝早起きすることは難しいです。
+Section 11-1	It is important to prepare for an earthquake.	地震に備えることは大切なことです。
+Section 11-1	It will be a lot of fun to ride the roller coaster tomorrow.	明日そのジェットコースターに乗るのはとても楽しいでしょう。
+Section 11-1	It is difficult for me to explain my thoughts in English.	私には英語で自分の考えを説明するのは難しいです。
+Section 11-1	It isn't necessary for you to write the book report now.	あなたは今，読書感想文を書く必要はありません。
+Section 11-1	I want you to clean the living room while I'm out.	私が外出している間にあなたに居間の掃除をしてほしいです。
+Section 11-1	My mother told me to share the cake with my brother.	私の母は私に，弟とケーキを分けるように言いました。
+Section 11-1	I had a toothache.  My mother advised me to see the dentist.	歯が痛かったです。母は私に歯医者に行くように助言しました。
+Section 11-2	Have you decided what to do during the summer vacation?	夏休みの間に何をするか決めましたか。
+Section 11-2	I'm not sure who〔whom〕 to ask about the hotels in London.	私はロンドンのホテルについて誰にたずねるべきかわかりません。
+Section 11-2	We discussed where to go on our vacation.	私たちは休暇でどこに出掛けるか話し合いました。
+Section 11-2	Juliet is wondering when to buy the plane tickets.	ジュリエットは飛行機のチケットをいつ買えばいいか考えています。
+Section 11-2	I don't know how to pronounce this word.	私はこの単語をどう発音するのか知りません。
+Section 11-2	She is thinking about which museums to visit in England.	彼女はイングランドでどの博物館を訪問すべきか考えています。
+Section 11-2	I'm lost. Could you tell me how to get to the hotel?	道に迷っています。そのホテルへの行き方を教えてくださいますか。
+Section 11-2	I asked Mr. Jones what to do in London.	私はジョーンズ先生にロンドンで何をすればよいかたずねました。
+Section 11-3	Betty was too shy to talk to the teacher.	ベティーはあまりに内気だったので先生に話しかけることができませんでした。
+Section 11-3	She was too nervous to ask a question.	彼女はあまりに緊張していたので質問することができませんでした。
+Section 11-3	The teacher spoke too fast for her to understand.	先生はあまりに早口で話したので彼女には理解できませんでした。
+Section 11-3	The homework was too difficult for her to finish in a day.	宿題はあまりに難しかったので彼女は１日で終わらせることができませんでした。
+Section 11-3	This tea is so hot that I can't drink it.	このお茶はとても熱いので私は飲めません。
+Section 11-3	The traffic was so busy that I couldn't be in time for the class.	道路がとても混んでいたので私は授業に間に合いませんでした。
+Section 11-3	My little brother is old enough to walk to our grandparents' house.	私の弟は祖父母の家に歩いて行けるほどの年齢です。
+Section 11-3	I left home early enough to be in time for school.	私は学校に間に合うのに十分早く家を出ました。
+Section 11-3	This bag isn't big enough for me to pack all the clothes I need for travel.	このバッグは私が旅行に必要な衣服を全部詰められるほど大きくありません。
+Section 11-4	My mother makes me eat fresh yogurt every morning.	私の母は毎朝，私に新鮮なヨーグルトを食べさせます。
+Section 11-4	My brother's joke made everyone laugh.	私の兄〔弟〕の冗談はみんなを笑わせました。
+Section 11-4	Our father sometimes lets us stay up late.	私たちの父は時々，私たちが夜遅くまで起きているのを許してくれます。
+Section 11-4	Please let me know when you need any help.	何か助けが必要な時には私に知らせてください。
+Section 11-4	My sister had the server bring another glass of water.	私の姉〔妹〕は給仕に水をもう１杯持ってきてもらいました。
+Section 12-1	I don't know when the party will start.	私はそのパーティーがいつ始まるのか知りません。
+Section 12-1	I cannot imagine what Karen wants for her birthday.	カレンが誕生日に何を欲しがっているか想像がつきません。
+Section 12-1	I have to tell the guests where they should hang their coats.	私はお客様にコートをどこに掛けるべきかを伝えなければなりません。
+Section 12-1	Can you tell me why Sam refused my invitation?	なぜサムが私の誘いを断ったのか教えてくれますか。
+Section 12-1	Do you know who made this birthday cake?	誰がこのバースデーケーキを作ったのか知っていますか。
+Section 12-1	I wonder how many guests will come to the party.	何人のお客様がパーティーにいらっしゃるのだろうか。
+Section 12-1	Takashi didn't know where Nancy was going last night.	タカシはナンシーが昨夜どこに行くところだったのか知りませんでした。
+Section 12-1	He asked me when she would come home.	彼は，いつ彼女が家に帰ってくるかと私にたずねました。
+Section 12-1	I wanted to know how I could contact you while you were out.	あなたの外出中に，どうやったらあなたと連絡を取れるかを知りたかったのです。
+Section 12-2	This is a great restaurant, isn't it?	これはすばらしいレストランですよね。
+Section 12-2	Jim ate a whole pizza, didn't he?	ジムはピザをまるごと１枚食べましたよね。
+Section 12-2	We can share this steak, can't we?	私たちはこのステーキを分け合えますよね。
+Section 12-2	New York isn't the capital city of the US, is it?	ニューヨークはアメリカ合衆国の首都ではありませんよね。
+Section 12-2	Bob doesn't like tomatoes, does he?	ボブはトマトが好きではありませんよね。
+Section 12-2	You have met my cousin, haven't you?	あなたは私のいとこに会ったことがありますよね。
+Section 12-2	Let's go to the beach after lunch, shall we?	昼食後に浜辺に行きませんか。
+Section 12-2	Pass me a cold drink, will you?	冷たい飲み物を取ってもらえますか。
+Section 12-2	There are a lot of people on this beach today, aren't there?	今日はこの浜辺にはたくさんの人がいますよね。
+Section 12-3	If it rains tomorrow, I will go to school by bus.	もし明日雨ならば，バスで学校に行くつもりです。
+Section 12-3	If I had wings, I would fly to school.	もし羽があれば，飛んで学校へ行くのに。
+Section 12-3	If I were not busy, I would help you.	もし私が忙しくなかったら，あなたを手伝うのですが。
+Section 12-3	If John were on the team, we could win the tournament.	もしジョンがチームにいれば，私たちはトーナメントで優勝できるのに。
+Section 12-3	If I had my smartphone with me, I could send text messages to John.	もしスマートフォンが私の手元にあれば，ジョンにメッセージを送ることができるのに。
+Section 12-3	What would you like to do if you were ten years older?	もしあなたが今より10歳年を取っているとしたら何をしたいですか。
+Section 12-3	The musical was amazing!  I wish I could sing like the star!	そのミュージカルはすばらしかったです！そのスターのように歌うことができたらなあ！
+Section 12-3	Mary's brother behaves as if he were a movie star.	メアリーの兄〔弟〕はまるで映画スターのようにふるまいます。
+    </script>
+</body>
+</html>
