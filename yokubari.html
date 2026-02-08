@@ -62,9 +62,8 @@
         .card-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #fdfdfd; border: 2px solid #eee; border-radius: 12px; padding: 30px; margin-bottom: 20px; position: relative; min-height: 250px; }
         .unit-badge { position: absolute; top: 10px; left: 10px; font-size: 11px; background: #eee; padding: 2px 8px; border-radius: 4px; }
         
-        /* ▼▼▼ 追加: カウンターのスタイル ▼▼▼ */
+        /* カウンターのスタイル */
         .card-counter { position: absolute; top: 10px; right: 10px; font-size: 14px; color: #888; font-weight: bold; }
-        /* ▲▲▲ 追加ここまで ▲▲▲ */
 
         .question-text { font-size: 22px; color: #333; text-align: center; margin-bottom: 20px; }
         .question-subtext { font-size: 18px; color: #666; text-align: center; padding-top: 15px; border-top: 1px solid #eee; width: 100%; }
@@ -125,6 +124,7 @@
             <div class="card-area">
                 <div class="unit-badge" id="questionUnit"></div>
                 <div class="card-counter" id="cardCounter"></div>
+                
                 <div class="question-text" id="questionText"></div>
                 <div class="question-subtext" id="questionSubtext"></div>
                 
@@ -188,9 +188,8 @@
             // 読み上げ設定
             const uttr = new SpeechSynthesisUtterance(item.eng);
             uttr.lang = 'en-US'; 
-            uttr.rate = 1.0; // 速度
+            uttr.rate = 1.0; 
             
-            // 既存の読み上げをキャンセルして再生
             window.speechSynthesis.cancel();
             window.speechSynthesis.speak(uttr);
         }
@@ -227,13 +226,12 @@
         }
 
         function show() {
-            window.speechSynthesis.cancel(); // ページめくり時に音声を停止
+            window.speechSynthesis.cancel();
             const item = currentList[idx];
             document.getElementById('questionUnit').textContent = item.unit;
             
-            // ▼▼▼ 追加: カウンター表示の更新 ▼▼▼
+            // カウンター更新
             document.getElementById('cardCounter').textContent = (idx + 1) + " / " + currentList.length;
-            // ▲▲▲ 追加ここまで ▲▲▲
 
             document.getElementById('questionSubtext').textContent = item.jpn;
             document.getElementById('correctText').textContent = item.eng;
@@ -266,27 +264,22 @@
 
         function showAnswer() {
             if (mode === 5) compareHighPrecision(document.getElementById('answerInput').value);
+            
+            // 【重要】入力ボックスからフォーカスを外す（これをしないとキーボードショートカットが効かない）
+            document.getElementById('answerInput').blur();
+            
             document.getElementById('answerDisplay').style.display = 'block';
             document.getElementById('showAnswerBtn').style.display = 'none';
             document.getElementById('evalButtons').style.display = 'flex';
         }
 
-        /**
-         * 高精度判定ロジック
-         * 引用符(" ' “ ” ‘ ’)を無視する設定に修正
-         */
         function compareHighPrecision(userInput) {
             const correctVal = currentList[idx].eng;
-            
-            // クリーニング関数: 記号を消して小文字にする
-            // ダブルクォーテーション、スマートクォート、アポストロフィー(’ ' ‘)を削除対象に追加
             const clean = (t) => t.toLowerCase().replace(/[.,!?"'“”‘’]/g, "").trim();
-            
             const userWords = userInput.split(/\s+/).filter(w => w !== "").map(clean);
             const correctWords = correctVal.split(/\s+/).filter(w => w !== "").map(clean);
             const originalCorrectWords = correctVal.split(/\s+/).filter(w => w !== "");
 
-            // DPテーブルの作成
             const n = userWords.length;
             const m = correctWords.length;
             const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
@@ -296,15 +289,11 @@
 
             for (let i = 1; i <= n; i++) {
                 for (let j = 1; j <= m; j++) {
-                    if (userWords[i - 1] === correctWords[j - 1]) {
-                        dp[i][j] = dp[i - 1][j - 1];
-                    } else {
-                        dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
-                    }
+                    if (userWords[i - 1] === correctWords[j - 1]) dp[i][j] = dp[i - 1][j - 1];
+                    else dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]) + 1;
                 }
             }
 
-            // バックトレース
             let i = n, j = m;
             const resultHtmlParts = [];
             let correctCount = 0;
@@ -312,14 +301,11 @@
             while (i > 0 || j > 0) {
                 if (i > 0 && j > 0 && userWords[i - 1] === correctWords[j - 1]) {
                     resultHtmlParts.unshift(`<span class="word-correct">${originalCorrectWords[j - 1]}</span>`);
-                    correctCount++;
-                    i--; j--;
+                    correctCount++; i--; j--;
                 } else if (j > 0 && (i === 0 || dp[i][j - 1] <= dp[i - 1][j] && dp[i][j - 1] <= dp[i - 1][j - 1])) {
-                    resultHtmlParts.unshift(`<span class="word-missing">${originalCorrectWords[j - 1]}</span>`);
-                    j--;
+                    resultHtmlParts.unshift(`<span class="word-missing">${originalCorrectWords[j - 1]}</span>`); j--;
                 } else {
-                    resultHtmlParts.unshift(`<span class="word-wrong">${userWords[i - 1]}</span>`);
-                    i--;
+                    resultHtmlParts.unshift(`<span class="word-wrong">${userWords[i - 1]}</span>`); i--;
                 }
             }
 
@@ -330,7 +316,7 @@
         }
 
         function record(s) {
-            window.speechSynthesis.cancel(); // 次へ行く時に停止
+            window.speechSynthesis.cancel();
             if (s !== 1) retryList.push(currentList[idx]);
             history.push({status: s, item: currentList[idx], wasInRetry: (s !== 1)});
             stats[s]++;
@@ -368,25 +354,40 @@
             document.getElementById('statsText').textContent = `覚: ${stats[1]} / 普: ${stats[2]} / 忘: ${stats[3]}`;
         }
 
+        // キーボード操作設定（修正済み）
         document.addEventListener('keydown', (e) => {
+            // IME変換中はショートカットを無効化
+            if (e.isComposing || e.keyCode === 229) return;
+
+            // 入力中かつEnterなら答えを表示。それ以外のキーは入力用として通す
             if (document.activeElement.tagName === 'INPUT') {
                 if(e.key === 'Enter') showAnswer();
                 return;
             }
             
-            // ショートカット 0 を追加
-            if(e.key === '0') playAudio();
-
             const isAnsVisible = document.getElementById('evalButtons').style.display === 'flex';
-            if (e.key === 'Enter' && !isAnsVisible) showAnswer();
-            if (e.key >= '1' && e.key <= '6') setMode(parseInt(e.key));
-            if (isAnsVisible) {
-                if (e.key.toLowerCase() === 'j') record(1);
-                if (e.key.toLowerCase() === 'k') record(2);
-                if (e.key.toLowerCase() === 'l') record(3);
-                if (e.key === 'Backspace' || e.key === 'ArrowLeft') goBack();
-                // 一応Pも残しておきますが、0で動作します
-                if (e.key.toLowerCase() === 'p') playAudio();
+
+            // Enterキーで答え確認
+            if (e.key === 'Enter' && !isAnsVisible) {
+                e.preventDefault(); // ボタンの連打などを防ぐ
+                showAnswer();
+            }
+            // 0キーで音声再生
+            else if (e.key === '0') {
+                playAudio();
+            }
+            // 1-6キーでモード変更
+            else if (e.key >= '1' && e.key <= '6') {
+                setMode(parseInt(e.key));
+            }
+            // 答え表示中の評価キー (J, K, L)
+            else if (isAnsVisible) {
+                const k = e.key.toLowerCase();
+                if (k === 'j') record(1);
+                else if (k === 'k') record(2);
+                else if (k === 'l') record(3);
+                else if (k === 'backspace' || k === 'arrowleft') goBack();
+                else if (k === 'p') playAudio();
             }
         });
 
